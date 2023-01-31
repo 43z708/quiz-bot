@@ -14,12 +14,11 @@
 		"eslint": "^8.33.0",
 		"eslint-plugin-import": "^2.27.5",
 		"eslint-plugin-n": "^15.6.1",
-		"eslint-plugin-promise": "^6.1.1",
-		"firebase-tools": "^11.21.0"
+		"eslint-plugin-promise": "^6.1.1"
 	},
 	"dependencies": {
-		"@google-cloud/firestore": "^6.4.2",
 		"discord.js": "^14.7.1",
-		"dotenv": "^16.0.3"
+		"dotenv": "^16.0.3",
+		"firebase-admin": "^11.5.0"
 	}
 }
