@@ -11,12 +11,12 @@ export const botDataConverter: FirestoreDataConverter<BotData> = {
   /**
    * BotData オブジェクトを Firestore ドキュメントデータへ変換
    */
-  toFirestore(botData: BotData): DocumentData {
+  toFirestore(data: BotData): DocumentData {
     return {
-      id: botData.id,
-      isAvailable: botData.isAvailable,
-      name: botData.name,
-      token: botData.token,
+      id: data.id,
+      isAvailable: data.isAvailable,
+      name: data.name,
+      token: data.token,
     };
   },
 
@@ -35,7 +35,7 @@ export const botDataConverter: FirestoreDataConverter<BotData> = {
 };
 
 export interface BotData {
-  id: number;
+  id: string;
   isAvailable: boolean;
   name: string;
   token: string;

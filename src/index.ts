@@ -10,7 +10,7 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
+const strage = admin.storage();
 
 (async function () {
   const bots = await db
@@ -22,7 +22,8 @@ const bucket = admin.storage().bucket();
       const botData: BotData = botDataConverter.fromFirestore(bot);
       const discordClient = new DiscordClient(botData.token);
       discordClient.login();
-      discordClient.messageCreate(db, bucket);
+      discordClient.channelCreate(db);
+      discordClient.messageCreate(db, strage);
     });
   }
 })();
