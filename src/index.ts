@@ -20,7 +20,7 @@ const botModel = new BotModel(db);
     bots.forEach((bot) => {
       const discordClient = new DiscordClient(bot.token);
       discordClient.login();
-      discordClient.channelCreate(db);
+      discordClient.guildCreate(db);
       discordClient.messageCreate(db, strage);
       discordClient.interactionCreate(db);
     });

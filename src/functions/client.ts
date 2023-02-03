@@ -11,6 +11,7 @@ import {
 import { CsvCommand } from './csv';
 import { ChannelCommand } from './channel';
 import { QuizCommand } from './quiz';
+import { GuildCommand } from './guild';
 import admin from 'firebase-admin';
 import utils from '../utils.json';
 import { ChannelData } from '../models/channelModel';
@@ -39,11 +40,14 @@ export class DiscordClient {
     this.client.login(this.token);
   }
 
-  public channelCreate(db: admin.firestore.Firestore) {
-    console.log('channelCreate');
+  public guildCreate(db: admin.firestore.Firestore) {
+    console.log('guildCreate');
     this.client.on('guildCreate', async (guild) => {
       // botがサーバーに参加した際、quizチャンネルを作成
-      await ChannelCommand.create(guild, this.client.user?.id ?? '', db);
+      await Promise.all([
+        ChannelCommand.create(guild, this.client.user?.id ?? '', db),
+        GuildCommand.create(guild, db),
+      ]);
     });
   }
 

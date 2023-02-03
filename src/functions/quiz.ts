@@ -16,6 +16,8 @@ import admin from 'firebase-admin';
 import utils from '../utils.json';
 import { QuestionModel } from '../models/questionModel';
 import { UserModel } from '../models/userModel';
+import { GuildCommand } from './guild';
+import { GuildData } from '../models/guildModel';
 
 export class QuizCommand {
   /**
@@ -32,27 +34,53 @@ export class QuizCommand {
       const response = await Promise.all([
         userModel.getUser(message.author.id, message.guildId),
         new QuestionModel(db).getQuestionIds(message.guildId),
+        GuildCommand.get(message.guildId, db),
       ]);
       const user = response[0];
       const questionIds: string[] = response[1];
+      const guildData: GuildData | null = response[2];
+      if (!guildData) {
+        return;
+      }
+      const cooltime = guildData.cooltime;
+      const numberOfQuestions = guildData.numberOfQuestions;
+
       const randomlySortedQuestionIds = this.shuffleArray(questionIds);
+      // csv問題数が設定問題数以下ならそのまま、csv問題数が設定問題数より多ければカット
+      const roundedQuestionIds =
+        questionIds.length <= numberOfQuestions
+          ? randomlySortedQuestionIds
+          : randomlySortedQuestionIds.slice(0, numberOfQuestions);
+
       if (user) {
-        // 2回目以降最初からやり直し
-        userModel.setUser(
-          message.author,
-          message.guildId,
-          randomlySortedQuestionIds,
-          admin.firestore.Timestamp.fromDate(new Date()),
-          0,
-          user.round + 1
-        );
+        const deadline = this.exportDeadline(user.startedAt.toDate(), cooltime);
+        const now = new Date().getTime();
+
+        // 2回目以降cooltime未満ならスルー
+        if (now <= deadline.deadlineTime) {
+          await message.reply(utils.coolTimeError);
+          return;
+        } else {
+          // 2回目以降cooltime以降なら最初からやり直し
+          userModel.setUser(
+            message.author,
+            message.guildId,
+            roundedQuestionIds,
+            admin.firestore.Timestamp.fromDate(new Date()),
+            admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
+            0,
+            user.round + 1
+          );
+        }
       } else {
         // 初回=>dbつくってランダムを返す
+        const deadline = this.exportDeadline(new Date(), cooltime);
         userModel.setUser(
           message.author,
           message.guildId,
-          randomlySortedQuestionIds,
+          roundedQuestionIds,
           admin.firestore.Timestamp.fromDate(new Date()),
+          admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
           0,
           0
         );
@@ -89,13 +117,11 @@ export class QuizCommand {
       user.id === interaction.user.id &&
       user.guildId === interaction.guildId
     ) {
-      // 開始時刻より6時間後を締切とする。
-      const deadline = user.startedAt.toDate();
-      deadline.setHours(deadline.getHours() + 6);
+      const deadline = user.deadline.toDate();
       const now = new Date();
 
       if (now.getTime() < deadline.getTime()) {
-        // 6時間以内
+        // cooltime以内
         if (user.order + 1 === user.questions.length) {
           // 最後の問題(userModelは変更の必要なし)
           // 終わりのメッセージ
@@ -106,13 +132,14 @@ export class QuizCommand {
             interaction.guildId!,
             user.questions,
             user.startedAt,
+            user.deadline,
             user.order + 1,
             user.round
           );
           // 次の問題を出題
         }
       } else {
-        // 6時間以降
+        // cooltime以降
         if (user.order + 1 === user.questions.length) {
           // 最後の問題で存在しないinteractionのはずなのでエラーを返す
         } else {
@@ -154,5 +181,28 @@ export class QuizCommand {
     }
 
     return cloneArray;
+  }
+
+  /**
+   * cooltime締め切りを算出
+   * @param date
+   * @param cooltime
+   * @returns
+   */
+  public static exportDeadline(
+    date: Date,
+    cooltime: number
+  ): { deadlineTime: number; deadlineDate: Date } {
+    const deadlineTime = date.getTime() + cooltime * 1000;
+
+    const hour = Math.floor(cooltime / 3600);
+    const min = Math.floor((cooltime % 3600) / 60);
+    const rem = cooltime % 60;
+
+    const deadlineDate = date;
+    deadlineDate.setHours(deadlineDate.getHours() + hour);
+    deadlineDate.setMinutes(deadlineDate.getMinutes() + min);
+    deadlineDate.setSeconds(deadlineDate.getSeconds() + rem);
+    return { deadlineTime, deadlineDate };
   }
 }

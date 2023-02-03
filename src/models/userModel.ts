@@ -19,6 +19,7 @@ export const userDataConverter: FirestoreDataConverter<UserData> = {
       name: data.name,
       questions: data.questions,
       startedAt: data.startedAt,
+      deadline: data.deadline,
       order: data.order,
       round: data.round,
     };
@@ -35,6 +36,7 @@ export const userDataConverter: FirestoreDataConverter<UserData> = {
       name: data.name,
       questions: data.questions,
       startedAt: data.startedAt,
+      deadline: data.deadline,
       order: data.order,
       round: data.round,
     };
@@ -47,6 +49,7 @@ export interface UserData {
   name: string;
   questions: string[];
   startedAt: admin.firestore.Timestamp;
+  deadline: admin.firestore.Timestamp;
   order: number; //クイズの何問目か（開始点0）
   round: number; //クイズを受けるのが何回目か（開始点0）
 }
@@ -62,6 +65,7 @@ export class UserModel {
     guildId: string,
     questions: string[],
     startedAt: admin.firestore.Timestamp,
+    deadline: admin.firestore.Timestamp,
     order: number,
     round: number
   ): Promise<void> {
@@ -78,6 +82,7 @@ export class UserModel {
             name: `${user.username}#${user.discriminator}`,
             questions: questions,
             startedAt: startedAt,
+            deadline: deadline,
             order: order,
             round: round,
           })
@@ -105,6 +110,7 @@ export class UserModel {
           name: data.name,
           questions: data.questions,
           startedAt: data.startedAt,
+          deadline: data.deadline,
           order: data.order,
           round: data.round,
         }

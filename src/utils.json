@@ -12,5 +12,6 @@
   "importErrorFormatReply": "csvファイルの入力に誤りがあります。",
   "importErrorReplyMoreThan2": "添付ファイルが多すぎます。1つだけcsvファイルを添付してください。",
   "mustUseInServer": "サーバーで実行する必要があります。",
-  "noUserInfo": "ユーザー情報がありません。管理者に問い合わせてください。"
+  "noUserInfo": "ユーザー情報がありません。管理者に問い合わせてください。",
+  "coolTimeError": "!quiz-startコマンドの制限時間のエラーが生じています。管理者に問い合わせてください。"
 }
