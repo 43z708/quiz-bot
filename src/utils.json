@@ -6,8 +6,11 @@
   "quizImportCommandName": "!quiz-import",
   "quizAnswersCommandName": "!quiz-answers",
   "quizStartCommandName": "!quiz-start",
-  "initialSendMessage": "@here \n**quiz-botの使い方**\n\n**csvテンプレート出力コマンド**：```!quiz-template```（quiz-managementチャンネル内のみ有効）\n\n**問題選択肢csvアップロードコマンド**：```!quiz-import```（quiz-managementチャンネル内のみ有効かつcsvファイルを添付したうえでコマンド入力必須）\n\n**回答一覧csv出力**：```!quiz-answers```（quiz-managementチャンネル内のみ有効）\n\n**クイズ開始コマンド**：```!quiz-start```（quizチャンネル内のみ有効）",
+  "initialSendMessage": "@here \n**quiz-botの使い方**\n\n**csvテンプレート出力コマンド**：```!quiz-template```（quiz-managementチャンネル内のみ有効）\n\n**クイズ問題csvアップロードコマンド（2回目のアップロード以降、データ追加ではなく上書き形式です）**：```!quiz-import```（quiz-managementチャンネル内のみ有効かつcsvファイルを添付したうえでコマンド入力必須）\n\n**回答一覧csv出力**：```!quiz-answers```（quiz-managementチャンネル内のみ有効）\n\n**クイズ開始コマンド**：```!quiz-start```（quizチャンネル内のみ有効）",
   "importSuccessReply": "csvの読み込みに成功しました。",
   "importErrorReply0": "csvファイルを添付してください。",
-  "importErrorReplyMoreThan2": "添付ファイルが多すぎます。1つだけcsvファイルを添付してください。"
+  "importErrorFormatReply": "csvファイルの入力に誤りがあります。",
+  "importErrorReplyMoreThan2": "添付ファイルが多すぎます。1つだけcsvファイルを添付してください。",
+  "mustUseInServer": "サーバーで実行する必要があります。",
+  "noUserInfo": "ユーザー情報がありません。管理者に問い合わせてください。"
 }

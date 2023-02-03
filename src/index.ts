@@ -2,7 +2,7 @@ import { Client, Events, GatewayIntentBits } from 'discord.js';
 import admin from 'firebase-admin';
 import { DiscordClient } from './functions/client';
 import { credentials } from './config';
-import { BotData, botDataConverter } from './types/botData';
+import { BotData, botDataConverter, BotModel } from './models/botModel';
 
 admin.initializeApp({
   credential: admin.credential.cert(credentials),
@@ -12,18 +12,17 @@ admin.initializeApp({
 const db = admin.firestore();
 const strage = admin.storage();
 
+const botModel = new BotModel(db);
+
 (async function () {
-  const bots = await db
-    .collection('bots')
-    .where('isAvailable', '==', true)
-    .get();
-  if (bots.size > 0) {
+  const bots = await botModel.getBots();
+  if (bots.length > 0) {
     bots.forEach((bot) => {
-      const botData: BotData = botDataConverter.fromFirestore(bot);
-      const discordClient = new DiscordClient(botData.token);
+      const discordClient = new DiscordClient(bot.token);
       discordClient.login();
       discordClient.channelCreate(db);
       discordClient.messageCreate(db, strage);
+      discordClient.interactionCreate(db);
     });
   }
 })();

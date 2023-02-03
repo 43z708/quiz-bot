@@ -3,6 +3,7 @@ import {
   FirestoreDataConverter,
   QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
+import admin from 'firebase-admin';
 
 /**
  * Firestore のドキュメントと BotData オブジェクトの型変換
@@ -39,4 +40,24 @@ export interface BotData {
   isAvailable: boolean;
   name: string;
   token: string;
+}
+
+export class BotModel {
+  private db;
+  constructor(db: admin.firestore.Firestore) {
+    this.db = db;
+  }
+  public async getBots(): Promise<BotData[]> {
+    const bots = await this.db
+      .collection('bots')
+      .where('isAvailable', '==', true)
+      .get();
+    const botData: BotData[] = [];
+    if (bots.size > 0) {
+      bots.forEach((bot) => {
+        botData.push(botDataConverter.fromFirestore(bot));
+      });
+    }
+    return botData;
+  }
 }

@@ -4,18 +4,21 @@ import {
   Message,
   GatewayIntentBits,
   PermissionsBitField,
-  PermissionFlagsBits,
-  ChannelType,
-  OverwriteType,
+  InteractionType,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
 } from 'discord.js';
 import { CsvCommand } from './csv';
 import { ChannelCommand } from './channel';
+import { QuizCommand } from './quiz';
 import admin from 'firebase-admin';
 import utils from '../utils.json';
+import { ChannelData } from '../models/channelModel';
 
 export class DiscordClient {
-  token: string;
-  client: Client;
+  private token: string;
+  private client: Client;
+  private channels: ChannelData[] = [];
 
   constructor(token: string) {
     this.token = token;
@@ -29,14 +32,14 @@ export class DiscordClient {
     });
   }
 
-  login() {
+  public login() {
     this.client.once(Events.ClientReady, (c) => {
       console.log(`Ready! Logged in as ${c.user.tag}`);
     });
     this.client.login(this.token);
   }
 
-  channelCreate(db: admin.firestore.Firestore) {
+  public channelCreate(db: admin.firestore.Firestore) {
     console.log('channelCreate');
     this.client.on('guildCreate', async (guild) => {
       // botがサーバーに参加した際、quizチャンネルを作成
@@ -44,26 +47,71 @@ export class DiscordClient {
     });
   }
 
-  messageCreate(db: admin.firestore.Firestore, strage: admin.storage.Storage) {
+  public interactionCreate(db: admin.firestore.Firestore) {
+    console.log('interactionCreate');
+    this.client.on('interactionCreate', async (interaction) => {
+      console.log({ interaction });
+
+      // quizチャンネル情報を取得
+      if (this.channels.length === 0) {
+        this.channels = await ChannelCommand.getChannels(
+          interaction.guild?.id ?? '',
+          db
+        );
+      }
+
+      if (!interaction.guildId && interaction.isRepliable()) {
+        await interaction.reply({
+          content: utils.mustUseInServer,
+        });
+        return;
+      }
+      // quizチャンネルのIDを取得
+      const channelId = ChannelCommand.getQuizChannel(this.channels).id;
+
+      if (
+        interaction.type === InteractionType.MessageComponent &&
+        interaction.isStringSelectMenu() &&
+        interaction.isRepliable() &&
+        interaction.channelId === channelId
+      ) {
+        await QuizCommand.reply(interaction, db);
+      }
+    });
+  }
+
+  public messageCreate(
+    db: admin.firestore.Firestore,
+    strage: admin.storage.Storage
+  ) {
     console.log('messageCreate');
     this.client.on('messageCreate', async (message) => {
       // bot自身のmessageは無視
       if (message.author.id == this.client.user?.id) {
         return;
       }
-      const channels = await ChannelCommand.getChannels(
-        message.guildId ?? '',
-        db
-      );
+      if (!message.guildId) {
+        await message.reply({
+          content: utils.mustUseInServer,
+        });
+        return;
+      }
 
-      const isQuizManagementChannel = channels.some(
-        (channel) =>
-          channel.type === 'quiz-management' &&
-          message.channel.id === channel.id
+      // チャンネル情報を取得
+      if (this.channels.length === 0) {
+        this.channels = await ChannelCommand.getChannels(
+          message.guild?.id ?? '',
+          db
+        );
+      }
+
+      const isQuizManagementChannel = ChannelCommand.isQuizManagementChannel(
+        this.channels,
+        message
       );
-      const isQuizChannel = channels.some(
-        (channel) =>
-          channel.type === 'quiz' && message.channel.id === channel.id
+      const isQuizChannel = ChannelCommand.isQuizChannel(
+        this.channels,
+        message
       );
 
       // csvテンプレート出力(quiz-managementチャンネルのみ)
@@ -82,7 +130,7 @@ export class DiscordClient {
         isQuizManagementChannel
       ) {
         console.log('quiz-import');
-        await CsvCommand.importCsv(message, strage);
+        await CsvCommand.importCsv(message, db);
       }
       // 回答一覧csv出力(quiz-managementチャンネルのみ)
       if (
@@ -95,12 +143,13 @@ export class DiscordClient {
       // クイズ開始(quizチャンネルのみ)
       if (message.content === utils.quizStartCommandName && isQuizChannel) {
         console.log('quiz-start');
+        await QuizCommand.start(message, db);
       }
     });
   }
 
   // メッセージ送信者が管理者権限をもつかどうか
-  isAdmin(message: Message) {
+  public isAdmin(message: Message) {
     return message.member?.permissions.has([
       PermissionsBitField.Flags.Administrator,
     ]);

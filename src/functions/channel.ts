@@ -9,7 +9,12 @@ import {
   OverwriteType,
   GuildMember,
 } from 'discord.js';
-import { channelDataConverter, ChannelData } from '../types/channelData';
+import {
+  ChannelModel,
+  channelDataConverter,
+  ChannelData,
+  ChannelDataType,
+} from '../models/channelModel';
 import admin from 'firebase-admin';
 import utils from '../utils.json';
 
@@ -38,7 +43,7 @@ export class ChannelCommand {
       const quizChannel = await guild.channels.create({
         name: utils.quizChannelName,
         type: ChannelType.GuildText,
-        rateLimitPerUser: 60,
+        rateLimitPerUser: 6 * 3600,
         parent: category.id,
       });
       const quizManagementChannel = await guild.channels.create({
@@ -52,32 +57,15 @@ export class ChannelCommand {
         ],
         parent: category.id,
       });
-
+      const channelModel = new ChannelModel(db);
       await Promise.all([
-        db
-          .collection('channels')
-          .doc(quizChannel.id)
-          .set(
-            channelDataConverter.toFirestore({
-              id: quizChannel.id,
-              name: quizChannel.name,
-              type: 'quiz',
-              botId: botId,
-              guildId: guild.id,
-            })
-          ),
-        db
-          .collection('channels')
-          .doc(quizManagementChannel.id)
-          .set(
-            channelDataConverter.toFirestore({
-              id: quizManagementChannel.id,
-              name: quizManagementChannel.name,
-              type: 'quiz-management',
-              botId: botId,
-              guildId: guild.id,
-            })
-          ),
+        channelModel.setChannel(quizChannel, 'quiz', botId, guild.id),
+        channelModel.setChannel(
+          quizManagementChannel,
+          'quiz-management',
+          botId,
+          guild.id
+        ),
       ]);
 
       await quizManagementChannel.send(utils.initialSendMessage);
@@ -88,14 +76,31 @@ export class ChannelCommand {
     guildId: string,
     db: admin.firestore.Firestore
   ): Promise<ChannelData[]> {
-    const channelDocs = await db
-      .collection('channels')
-      .where('guildId', '==', guildId)
-      .get();
-    const channelDataList: ChannelData[] = [];
-    channelDocs.forEach((doc) => {
-      channelDataList.push(channelDataConverter.fromFirestore(doc));
-    });
-    return channelDataList;
+    console.log('getChannels');
+    const channels = await new ChannelModel(db).getChannels(guildId);
+    return channels;
+  }
+
+  public static isQuizManagementChannel(
+    channels: ChannelData[],
+    message: Message
+  ): boolean {
+    return channels.some(
+      (channel) =>
+        channel.type === 'quiz-management' && message.channel.id === channel.id
+    );
+  }
+
+  public static isQuizChannel(
+    channels: ChannelData[],
+    message: Message
+  ): boolean {
+    return channels.some(
+      (channel) => channel.type === 'quiz' && message.channel.id === channel.id
+    );
+  }
+
+  public static getQuizChannel(channels: ChannelData[]): ChannelData {
+    return channels.find((channel) => channel.type === 'quiz')!;
   }
 }

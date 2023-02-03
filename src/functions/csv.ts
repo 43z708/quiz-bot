@@ -9,9 +9,11 @@ import {
   OverwriteType,
   GuildMember,
 } from 'discord.js';
-import { channelDataConverter, ChannelDataType } from '../types/channelData.js';
+import { channelDataConverter, ChannelDataType } from '../models/channelModel';
+import { QuestionModel } from '../models/questionModel';
 import admin from 'firebase-admin';
 import utils from '../utils.json';
+import fetch from 'node-fetch';
 
 export class CsvCommand {
   /**
@@ -41,21 +43,25 @@ export class CsvCommand {
   /**
    * csv問題入力
    * @param message
-   * @param strage
    */
   static async importCsv(
     message: Message,
-    strage: admin.storage.Storage
+    db: admin.firestore.Firestore
   ): Promise<void> {
     const urls = message.attachments.map((attachment) => attachment.url);
     if (urls.length === 1 && urls[0]) {
-      const csvfile = new XMLHttpRequest(); //要修正
-      csvfile.open('get', urls[0], true);
-      csvfile.send(null);
-      csvfile.onload = () => {
-        const resultData = this.convertCSV(csvfile.responseText);
-        console.log({ resultData });
-      };
+      const response = await fetch(urls[0]);
+      const data = await response.text();
+      console.log(this.convertCSV(data));
+      if (this.convertCSV(data).length !== 0) {
+        await new QuestionModel(db).setQuestions(
+          this.convertCSV(data),
+          message.guildId ?? ''
+        );
+        await message.reply(utils.importSuccessReply);
+      } else {
+        message.reply(utils.importErrorFormatReply);
+      }
     } else if (urls.length === 0) {
       message.reply(utils.importErrorReply0);
     } else {
@@ -69,16 +75,30 @@ export class CsvCommand {
    */
   static convertCSV(csvdata: string): string[][] {
     const resultdata: string[][] = []; // データを入れるための配列
-    const tmp = csvdata.split('\n'); // 改行を基準にデータを行ごとで配列化
+    csvdata = csvdata.replace(/\r\n/g, '\n'); //IE対策　改行コード\r\nを\rに変換
+    csvdata = csvdata.replace(/^(\n+)|(\n+)$/g, ''); //文頭と文末の余計な改行を除去
+    const tmp = csvdata.split(/\n/g); //改行で分割
     // 各行ごとにカンマで区切った文字列の配列データを生成
     if (tmp.length > 0) {
-      for (let i = 0; i < tmp.length; i++) {
-        var tmpROW = tmp[i]?.split(',') ?? [];
-        if (tmpROW.length > 0) {
-          resultdata[i] = tmpROW;
+      const head = tmp[0]?.split(',') ?? [];
+      if (
+        head[0] === '問題' &&
+        head[1] === '選択肢A' &&
+        head[2] === '選択肢B' &&
+        head[3] === '選択肢C' &&
+        head[4] === '選択肢D' &&
+        head[5] === '解答'
+      ) {
+        for (let i = 1; i < tmp.length; i++) {
+          const tmpROW = tmp[i]?.split(',') ?? [];
+          if (tmpROW.length > 0) {
+            resultdata[i - 1] = tmpROW;
+          }
         }
       }
+      return resultdata;
+    } else {
+      return [];
     }
-    return resultdata;
   }
 }

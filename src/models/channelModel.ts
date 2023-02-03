@@ -3,7 +3,8 @@ import {
   FirestoreDataConverter,
   QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
-
+import admin from 'firebase-admin';
+import { TextChannel } from 'discord.js';
 /**
  * Firestore のドキュメントと ChannelData オブジェクトの型変換
  */
@@ -45,3 +46,42 @@ export interface ChannelData {
 }
 
 export type ChannelDataType = 'quiz' | 'quiz-management';
+
+export class ChannelModel {
+  private db;
+  constructor(db: admin.firestore.Firestore) {
+    this.db = db;
+  }
+
+  public async setChannel(
+    channel: TextChannel,
+    type: ChannelDataType,
+    botId: string,
+    guildId: string
+  ): Promise<void> {
+    await this.db
+      .collection('channels')
+      .doc(channel.id)
+      .set(
+        channelDataConverter.toFirestore({
+          id: channel.id,
+          name: channel.name,
+          type: type,
+          botId: botId,
+          guildId: guildId,
+        })
+      );
+  }
+
+  public async getChannels(guildId: string): Promise<ChannelData[]> {
+    const channelDocs = await this.db
+      .collection('channels')
+      .where('guildId', '==', guildId)
+      .get();
+    const channelDataList: ChannelData[] = [];
+    channelDocs.forEach((doc) => {
+      channelDataList.push(channelDataConverter.fromFirestore(doc));
+    });
+    return channelDataList;
+  }
+}
