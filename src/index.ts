@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import { ClientlController } from './controller/client';
+import { ClientlController } from './controller/clientController';
 import { credentials } from './config';
 import { BotModel } from './models/botModel';
 
