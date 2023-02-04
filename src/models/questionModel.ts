@@ -17,7 +17,7 @@ export const questionDataConverter: FirestoreDataConverter<QuestionData> = {
       guildId: data.guildId,
       question: data.question,
       options: data.options,
-      answer: data.answer,
+      correct: data.correct,
     };
   },
 
@@ -31,7 +31,7 @@ export const questionDataConverter: FirestoreDataConverter<QuestionData> = {
       guildId: data.guildId,
       question: data.question,
       options: data.options,
-      answer: data.answer,
+      correct: data.correct,
     };
   },
 };
@@ -42,7 +42,7 @@ export interface QuestionData {
   id: string;
   question: string;
   options: OptionType;
-  answer: AnswerType;
+  correct: CorrectType;
 }
 
 export interface OptionType {
@@ -52,10 +52,10 @@ export interface OptionType {
   D: string;
 }
 
-export const Answer = ['A', 'B', 'C', 'D'] as const;
-export type AnswerType = typeof Answer[number];
-export const isAnswer = (name: string): name is AnswerType => {
-  return Answer.some((value) => value === name);
+export const Correct = ['A', 'B', 'C', 'D'] as const;
+export type CorrectType = typeof Correct[number];
+export const isCorrect = (name: string): name is CorrectType => {
+  return Correct.some((value) => value === name);
 };
 
 export class QuestionModel {
@@ -95,7 +95,7 @@ export class QuestionModel {
         const optionB = question[2];
         const optionC = question[3];
         const optionD = question[4];
-        const answerText = question[5];
+        const correctText = question[5];
 
         if (
           questionText &&
@@ -103,8 +103,8 @@ export class QuestionModel {
           optionB &&
           optionC &&
           optionD &&
-          answerText &&
-          isAnswer(answerText)
+          correctText &&
+          isCorrect(correctText)
         ) {
           const newDocId = collection.doc().id;
           await collection.doc(newDocId).set(
@@ -113,7 +113,7 @@ export class QuestionModel {
               id: newDocId,
               question: questionText,
               options: { A: optionA, B: optionB, C: optionC, D: optionD },
-              answer: answerText,
+              correct: correctText,
             })
           );
         }
@@ -129,17 +129,17 @@ export class QuestionModel {
    * @param guildId
    * @returns
    */
-  public async getQuestionIds(guildId: string): Promise<string[]> {
+  public async getAllQuestions(guildId: string): Promise<QuestionData[]> {
     const questionDocs = await this.db
       .collection('guilds')
       .doc(guildId)
       .collection('questions')
       .get();
-    const questionIds: string[] = [];
+    const questions: QuestionData[] = [];
     questionDocs.forEach((doc) => {
-      questionIds.push(doc.id);
+      questions.push(questionDataConverter.fromFirestore(doc));
     });
-    return questionIds;
+    return questions;
   }
 
   /**
@@ -166,7 +166,7 @@ export class QuestionModel {
           guildId: data.guildId,
           question: data.question,
           options: data.options,
-          answer: data.answer,
+          correct: data.correct,
         }
       : null;
   }

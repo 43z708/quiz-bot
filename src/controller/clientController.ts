@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 import { CsvController } from './csvController';
 import { ChannelController } from './channelController';
-import { QuizController } from './quiz';
+import { QuizController } from './quizController';
 import { GuildController } from './guildController';
 import admin from 'firebase-admin';
 import { utils } from '../utils';

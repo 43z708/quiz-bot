@@ -7,10 +7,12 @@ import {
 } from 'discord.js';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
-import { QuestionModel, AnswerType } from '../models/questionModel';
+import { QuestionModel, CorrectType } from '../models/questionModel';
 import { UserModel } from '../models/userModel';
 import { GuildController } from './guildController';
 import { GuildData } from '../models/guildModel';
+import { QuestionData } from '../models/questionModel';
+import { AnswerModel } from '../models/answerModel';
 
 /**
  * クイズに関する処理
@@ -29,15 +31,19 @@ export class QuizController {
       // 処理に時間がかかるため入力中フラグ
       await message.channel.sendTyping();
       const userModel = new UserModel(db);
+      const answerModel = new AnswerModel(db);
+      // 一連の回答に対する一意なidを付与する
+      const answerId = answerModel.createId(message.guildId);
 
       // ユーザー情報、全問題ID、サーバー情報を取得
       const response = await Promise.all([
         userModel.getUser(message.author.id, message.guildId),
-        new QuestionModel(db).getQuestionIds(message.guildId),
+        new QuestionModel(db).getAllQuestions(message.guildId),
         GuildController.get(message.guildId, db),
       ]);
       const user = response[0];
-      const questionIds: string[] = response[1];
+      const questions: QuestionData[] = response[1];
+      const questionIds: string[] = questions.map((question) => question.id);
       const guildData: GuildData | null = response[2];
       if (!guildData) {
         return;
@@ -55,13 +61,30 @@ export class QuizController {
           : randomlySortedQuestionIds.slice(0, numberOfQuestions);
 
       // 現在時刻からクールタイムを考慮した締切時間を算出
-      const deadline = this.exportDeadline(new Date(), cooltime);
+      const now = new Date();
+      const deadline = this.exportDeadline(now, cooltime);
 
+      if (roundedQuestionIds[0]) {
+        // クイズ1問目を送信
+        const component = await this.getQuizComponent(
+          message.author.id,
+          message.guildId,
+          answerId,
+          0,
+          roundedQuestionIds.length,
+          deadline.deadlineTime,
+          roundedQuestionIds[0],
+          db
+        );
+        await message.reply(component);
+      }
+
+      // dbの整理
       if (user) {
         // クイズ2回目以降の回答(すでにユーザー情報があるため)
-        const now = new Date().getTime();
+        const nowTime = now.getTime();
 
-        if (now <= user.deadline.toDate().getTime()) {
+        if (nowTime <= user.deadline.toDate().getTime()) {
           // 締切時間前にクイズを!quiz-startで再開することはできない。(discord上でcooltime設定を変えている可能性を考慮)
           await message.reply(utils.coolTimeError);
           return;
@@ -72,7 +95,7 @@ export class QuizController {
             message.author,
             message.guildId,
             roundedQuestionIds,
-            admin.firestore.Timestamp.fromDate(new Date()),
+            admin.firestore.Timestamp.fromDate(now),
             admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
             0,
             user.round + 1
@@ -84,26 +107,21 @@ export class QuizController {
           message.author,
           message.guildId,
           roundedQuestionIds,
-          admin.firestore.Timestamp.fromDate(new Date()),
+          admin.firestore.Timestamp.fromDate(now),
           admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
           0,
           0
         );
       }
 
-      if (roundedQuestionIds[0]) {
-        // クイズ1問目を出題
-        const component = await this.getQuizComponent(
-          message.author.id,
-          message.guildId,
-          0,
-          roundedQuestionIds.length,
-          deadline.deadlineTime,
-          roundedQuestionIds[0],
-          db
-        );
-        await message.reply(component);
-      }
+      await answerModel.create({
+        answerId: answerId,
+        startedAt: admin.firestore.Timestamp.fromDate(now),
+        round: user ? user.round + 1 : 0,
+        message: message,
+        questions: questions,
+        numberOfQuestions: roundedQuestionIds.length,
+      });
     }
   }
 
@@ -128,11 +146,20 @@ export class QuizController {
       interaction.reply(utils.noUserInfo);
       return;
     }
-    // interaction情報に対し、ユーザー、サーバー、クイズの問題IDの一致を確認
+
+    // customIdからanswerIdとquestionIdを取得
+    const obj = this.fromCustomId(interaction.customId);
+    if (obj === null) {
+      return;
+    }
+    const answerId = obj.answerId;
+    const questionId = obj.questionId;
+    // interaction情報に対し、ユーザー、サーバー、クイズの問題IDの一致を確認し、interaction.values[0]つまり回答が返ってきていることを確認
     if (
       user.id === interaction.user.id &&
       user.guildId === interaction.guildId &&
-      user.questions[user.order] === interaction.customId
+      user.questions[user.order] === questionId &&
+      interaction.values[0]
     ) {
       // 処理に時間がかかるため入力中フラグ
       await interaction.channel?.sendTyping();
@@ -140,10 +167,22 @@ export class QuizController {
       const deadline = user.deadline.toDate();
       const now = new Date();
 
+      const answerModel = new AnswerModel(db);
+
       if (now.getTime() < deadline.getTime()) {
         // 締切時間前
         if (user.order + 1 >= user.questions.length) {
           // 最後の問題(userModelは変更の必要なし)
+          await answerModel.update({
+            answerId: answerId,
+            guildId: user.guildId,
+            userId: user.id,
+            startedAt: user.startedAt,
+            finishedAt: admin.firestore.Timestamp.fromDate(now),
+            round: user.round,
+            questionId: questionId,
+            answer: interaction.values[0],
+          });
           // 終了メッセージを送信
           interaction.reply(`<@!${user.id}> ${utils.quizEnd}`);
         } else {
@@ -152,6 +191,7 @@ export class QuizController {
             this.getQuizComponent(
               interaction.user.id,
               interaction.guildId,
+              answerId,
               user.order + 1,
               user.questions.length,
               deadline.getTime(),
@@ -167,6 +207,16 @@ export class QuizController {
               user.order + 1,
               user.round
             ),
+            answerModel.update({
+              answerId: answerId,
+              guildId: user.guildId,
+              userId: user.id,
+              startedAt: user.startedAt,
+              finishedAt: null,
+              round: user.round,
+              questionId: questionId,
+              answer: interaction.values[0],
+            }),
           ]);
           await interaction.reply(response[0]);
         }
@@ -187,6 +237,7 @@ export class QuizController {
    * クイズのコンポーネントを作成
    * @param userId
    * @param guildId
+   * @param answerId
    * @param order
    * @param numberOfQuestions
    * @param deadlineTime //Date型から取得するミリ秒
@@ -197,6 +248,7 @@ export class QuizController {
   public static async getQuizComponent(
     userId: string,
     guildId: string,
+    answerId: string,
     order: number,
     numberOfQuestions: number,
     deadlineTime: number,
@@ -224,9 +276,8 @@ export class QuizController {
       .setColor(0x0099ff)
       .setTitle(questionData.question);
     questionData.options;
-    type key = 'A' | 'B' | 'C' | 'D';
     // 選択肢をシャッフル
-    const randomlySortedKeys: AnswerType[] = this.shuffleArray([
+    const randomlySortedKeys: CorrectType[] = this.shuffleArray([
       'A',
       'B',
       'C',
@@ -236,7 +287,7 @@ export class QuizController {
     // select menuで選択肢をつくる
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
       new StringSelectMenuBuilder()
-        .setCustomId(questionData.id)
+        .setCustomId(this.toCustomId(answerId, questionData.id))
         .setPlaceholder(utils.placeholder)
         .addOptions(
           {
@@ -262,6 +313,35 @@ export class QuizController {
       embeds: [embed],
       components: [row],
     };
+  }
+
+  /**
+   * quizComponentで使うcustomIdに変換
+   * @param answerId
+   * @param questionId
+   * @returns
+   */
+  public static toCustomId(answerId: string, questionId: string): string {
+    return JSON.stringify({
+      answerId: answerId,
+      questionId: questionId,
+    });
+  }
+
+  /**
+   * quizComponentのcustomIdからanswerIdとquestionIdを取得。別のinteractionの場合はnull
+   * @param customId
+   * @returns { answerId: string; questionId: string } | null
+   */
+  public static fromCustomId(
+    customId: string
+  ): { answerId: string; questionId: string } | null {
+    const obj = JSON.parse(customId);
+    if (obj.answerId && obj.questionId) {
+      return obj;
+    } else {
+      return null;
+    }
   }
 
   /**
