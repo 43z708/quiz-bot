@@ -6,10 +6,10 @@ import {
   PermissionsBitField,
   InteractionType,
 } from 'discord.js';
-import { CsvController } from './csv';
-import { ChannelController } from './channel';
+import { CsvController } from './csvController';
+import { ChannelController } from './channelController';
 import { QuizController } from './quiz';
-import { GuildController } from './guild';
+import { GuildController } from './guildController';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
 import { ChannelData } from '../models/channelModel';

@@ -9,7 +9,7 @@ import admin from 'firebase-admin';
 import { utils } from '../utils';
 import { QuestionModel, AnswerType } from '../models/questionModel';
 import { UserModel } from '../models/userModel';
-import { GuildController } from './guild';
+import { GuildController } from './guildController';
 import { GuildData } from '../models/guildModel';
 
 /**
