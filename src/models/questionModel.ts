@@ -36,6 +36,7 @@ export const questionDataConverter: FirestoreDataConverter<QuestionData> = {
   },
 };
 
+// questionsコレクションのデータ型
 export interface QuestionData {
   guildId: string;
   id: string;
@@ -63,6 +64,11 @@ export class QuestionModel {
     this.db = db;
   }
 
+  /**
+   * CSVから問題情報を保存（一度全部消して保存しなおす）
+   * @param questions
+   * @param guildId
+   */
   public async setQuestions(
     questions: string[][],
     guildId: string
@@ -118,6 +124,11 @@ export class QuestionModel {
     }
   }
 
+  /**
+   * 全問題ID情報を取得
+   * @param guildId
+   * @returns
+   */
   public async getQuestionIds(guildId: string): Promise<string[]> {
     const questionDocs = await this.db
       .collection('guilds')
@@ -131,6 +142,12 @@ export class QuestionModel {
     return questionIds;
   }
 
+  /**
+   * 問題IDから問題情報を取得
+   * @param questionId
+   * @param guildId
+   * @returns
+   */
   public async getQuestion(
     questionId: string,
     guildId: string

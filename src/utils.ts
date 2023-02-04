@@ -7,7 +7,7 @@ export const utils = {
   quizAnswersCommandName: '!quiz-answers',
   quizStartCommandName: '!quiz-start',
   initialSendMessage:
-    '@here \n**quiz-botの使い方**\n\n**csvテンプレート出力コマンド**：```!quiz-template```（quiz-managementチャンネル内のみ有効）\n\n**クイズ問題csvアップロードコマンド（2回目のアップロード以降、データ追加ではなく上書き形式です）**：```!quiz-import```（quiz-managementチャンネル内のみ有効かつcsvファイルを添付したうえでコマンド入力必須）\n\n**回答一覧csv出力**：```!quiz-answers```（quiz-managementチャンネル内のみ有効）\n\n**クイズ開始コマンド**：```!quiz-start```（quizチャンネル内のみ有効）',
+    '@here \n**quiz-botの使い方**\n\n**csvテンプレート出力コマンド**：```!quiz-template```（quiz-managementチャンネル内のみ有効）\n\n**クイズ問題csvアップロードコマンド（2回目のアップロード以降、データ追加ではなく上書き形式です）**：```!quiz-import```（quiz-managementチャンネル内のみ有効かつcsvファイルを添付したうえでコマンド入力必須）\n\n**回答一覧csv出力**：```!quiz-answers```（quiz-managementチャンネル内のみ有効）\n\n**クイズ開始コマンド**：```!quiz-start```（quizチャンネル内のみ有効）\n\n※quiz-managementチャンネル：管理者専用\n※quizチャンネル：クイズを実際に受けるチャンネル（cooltime初期値は6時間、変更の際は開発者に問合せてください。）\n※出題数初期値は30問。csvが30問以上なら30問をランダムピックアップして出題、30問未満なら全問題をシャッフルして出題されます。出題数初期値30問を変更したい場合は開発者に問い合わせてください。',
   importSuccessReply: 'csvの読み込みに成功しました。',
   importErrorReply0: 'csvファイルを添付してください。',
   importErrorFormatReply: 'csvファイルの入力に誤りがあります。',
@@ -20,7 +20,7 @@ export const utils = {
   questionNumber: (order: number, numberOfQuestions: number) => {
     return `第${order + 1}問 / 全${numberOfQuestions}問`;
   },
-  deadline: '制限時間',
+  deadline: 'までに全問題に回答してください。',
   placeholder: '選択してください。',
   quizEnd: 'お疲れ様でした！クイズは終了です。',
   systemError: 'システムエラーが発生しています。管理者に問い合わせてください。',

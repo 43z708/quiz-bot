@@ -5,18 +5,19 @@ import {
   GatewayIntentBits,
   PermissionsBitField,
   InteractionType,
-  ActionRowBuilder,
-  StringSelectMenuBuilder,
 } from 'discord.js';
-import { CsvCommand } from './csv';
-import { ChannelCommand } from './channel';
-import { QuizCommand } from './quiz';
-import { GuildCommand } from './guild';
+import { CsvController } from './csv';
+import { ChannelController } from './channel';
+import { QuizController } from './quiz';
+import { GuildController } from './guild';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
 import { ChannelData } from '../models/channelModel';
 
-export class DiscordClient {
+/**
+ * nodejs起動時に発火するclientの処理
+ */
+export class ClientlController {
   private token: string;
   private client: Client;
   private channels: ChannelData[] = [];
@@ -40,30 +41,36 @@ export class DiscordClient {
     this.client.login(this.token);
   }
 
+  /**
+   * botがサーバーに参加した際、quizチャンネルを作成
+   * @param db
+   */
   public guildCreate(db: admin.firestore.Firestore) {
-    console.log('guildCreate');
     this.client.on('guildCreate', async (guild) => {
-      // botがサーバーに参加した際、quizチャンネルを作成
       await Promise.all([
-        ChannelCommand.create(guild, this.client.user?.id ?? '', db),
-        GuildCommand.create(guild, db),
+        ChannelController.create(guild, this.client.user?.id ?? '', db),
+        GuildController.create(guild, db),
       ]);
     });
   }
 
+  /**
+   * selectmenuを選択した際に発火する
+   * @param db
+   */
   public interactionCreate(db: admin.firestore.Firestore) {
-    console.log('interactionCreate');
     this.client.on('interactionCreate', async (interaction) => {
       console.log({ interaction });
 
       // quizチャンネル情報を取得
       if (this.channels.length === 0) {
-        this.channels = await ChannelCommand.getChannels(
+        this.channels = await ChannelController.getChannels(
           interaction.guild?.id ?? '',
           db
         );
       }
 
+      // サーバー情報が読み取れない場合はエラー
       if (!interaction.guildId && interaction.isRepliable()) {
         await interaction.reply({
           content: utils.mustUseInServer,
@@ -71,7 +78,7 @@ export class DiscordClient {
         return;
       }
       // quizチャンネルのIDを取得
-      const channelId = ChannelCommand.getQuizChannel(this.channels).id;
+      const channelId = ChannelController.getQuizChannel(this.channels).id;
 
       if (
         interaction.type === InteractionType.MessageComponent &&
@@ -79,21 +86,26 @@ export class DiscordClient {
         interaction.isRepliable() &&
         interaction.channelId === channelId
       ) {
-        await QuizCommand.reply(interaction, db);
+        await QuizController.reply(interaction, db);
       }
     });
   }
 
+  /**
+   * メッセージが送られた際に発火
+   * @param db
+   * @param strage
+   */
   public messageCreate(
     db: admin.firestore.Firestore,
     strage: admin.storage.Storage
   ) {
-    console.log('messageCreate');
     this.client.on('messageCreate', async (message) => {
       // bot自身のmessageは無視
       if (message.author.id == this.client.user?.id) {
         return;
       }
+      // サーバー情報が読み取れない場合はエラー
       if (!message.guildId) {
         await message.reply({
           content: utils.mustUseInServer,
@@ -103,17 +115,20 @@ export class DiscordClient {
 
       // チャンネル情報を取得
       if (this.channels.length === 0) {
-        this.channels = await ChannelCommand.getChannels(
+        this.channels = await ChannelController.getChannels(
           message.guild?.id ?? '',
           db
         );
       }
 
-      const isQuizManagementChannel = ChannelCommand.isQuizManagementChannel(
+      // 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
+      const isQuizManagementChannel = ChannelController.isQuizManagementChannel(
         this.channels,
         message
       );
-      const isQuizChannel = ChannelCommand.isQuizChannel(
+
+      // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
+      const isQuizChannel = ChannelController.isQuizChannel(
         this.channels,
         message
       );
@@ -124,7 +139,7 @@ export class DiscordClient {
         message.content === utils.quizTemplateCommandName &&
         isQuizManagementChannel
       ) {
-        await CsvCommand.exportTemplate(message, strage);
+        await CsvController.exportTemplate(message, strage);
       }
 
       // 問題選択肢csvアップロード(quiz-managementチャンネルのみ)
@@ -133,8 +148,7 @@ export class DiscordClient {
         message.content === utils.quizImportCommandName &&
         isQuizManagementChannel
       ) {
-        console.log('quiz-import');
-        await CsvCommand.importCsv(message, db);
+        await CsvController.importCsv(message, db);
       }
       // 回答一覧csv出力(quiz-managementチャンネルのみ)
       if (
@@ -146,8 +160,7 @@ export class DiscordClient {
       }
       // クイズ開始(quizチャンネルのみ)
       if (message.content === utils.quizStartCommandName && isQuizChannel) {
-        console.log('quiz-start');
-        await QuizCommand.start(message, db);
+        await QuizController.start(message, db);
       }
     });
   }

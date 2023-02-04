@@ -37,6 +37,7 @@ export const channelDataConverter: FirestoreDataConverter<ChannelData> = {
   },
 };
 
+// channelsコレクションのデータ型
 export interface ChannelData {
   id: string;
   name: string;
@@ -53,6 +54,13 @@ export class ChannelModel {
     this.db = db;
   }
 
+  /**
+   * channel情報を保存
+   * @param channel
+   * @param type
+   * @param botId
+   * @param guildId
+   */
   public async setChannel(
     channel: TextChannel,
     type: ChannelDataType,
@@ -73,6 +81,11 @@ export class ChannelModel {
       );
   }
 
+  /**
+   * 全channelを取得
+   * @param guildId
+   * @returns
+   */
   public async getChannels(guildId: string): Promise<ChannelData[]> {
     const channelDocs = await this.db
       .collection('channels')

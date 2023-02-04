@@ -1,26 +1,17 @@
 import {
-  Client,
-  Events,
   Message,
-  GatewayIntentBits,
   Guild,
   PermissionFlagsBits,
   ChannelType,
   OverwriteType,
-  GuildMember,
 } from 'discord.js';
-import {
-  ChannelModel,
-  channelDataConverter,
-  ChannelData,
-  ChannelDataType,
-} from '../models/channelModel';
+import { ChannelModel, ChannelData } from '../models/channelModel';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
 
-export class ChannelCommand {
+export class ChannelController {
   /**
-   * チェンネル作成
+   * チャンネル作成
    * @param member bot自身
    * @param db
    */
@@ -29,13 +20,15 @@ export class ChannelCommand {
     botId: string,
     db: admin.firestore.Firestore
   ): Promise<void> {
+    // バリデーション
     const countchannels = await db
       .collection('channels')
       .where('guildId', '==', guild.id)
       .count()
       .get();
+
+    // quizカテゴリとチャンネル、管理用チャンネルを作成する
     if (countchannels.data().count === 0) {
-      countchannels;
       const category = await guild.channels.create({
         name: utils.categoryName,
         type: ChannelType.GuildCategory,
@@ -71,16 +64,26 @@ export class ChannelCommand {
       await quizManagementChannel.send(utils.initialSendMessage);
     }
   }
-
+  /**
+   * チャンネル情報を取得
+   * @param guildId
+   * @param db
+   * @returns
+   */
   static async getChannels(
     guildId: string,
     db: admin.firestore.Firestore
   ): Promise<ChannelData[]> {
-    console.log('getChannels');
     const channels = await new ChannelModel(db).getChannels(guildId);
     return channels;
   }
 
+  /**
+   * 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
+   * @param channels
+   * @param message
+   * @returns
+   */
   public static isQuizManagementChannel(
     channels: ChannelData[],
     message: Message
@@ -91,6 +94,12 @@ export class ChannelCommand {
     );
   }
 
+  /**
+   * 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
+   * @param channels
+   * @param message
+   * @returns
+   */
   public static isQuizChannel(
     channels: ChannelData[],
     message: Message
@@ -100,6 +109,11 @@ export class ChannelCommand {
     );
   }
 
+  /**
+   * quizチャンネルの情報を取得
+   * @param channels
+   * @returns
+   */
   public static getQuizChannel(channels: ChannelData[]): ChannelData {
     return channels.find((channel) => channel.type === 'quiz')!;
   }

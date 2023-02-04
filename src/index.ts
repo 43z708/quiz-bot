@@ -1,8 +1,7 @@
-import { Client, Events, GatewayIntentBits } from 'discord.js';
 import admin from 'firebase-admin';
-import { DiscordClient } from './functions/client';
+import { ClientlController } from './controller/client';
 import { credentials } from './config';
-import { BotData, botDataConverter, BotModel } from './models/botModel';
+import { BotModel } from './models/botModel';
 
 admin.initializeApp({
   credential: admin.credential.cert(credentials),
@@ -15,14 +14,16 @@ const strage = admin.storage();
 const botModel = new BotModel(db);
 
 (async function () {
+  // bot情報を取得。新しいbotを作る際は、firestoreに事前に情報を入れておく。
   const bots = await botModel.getBots();
   if (bots.length > 0) {
     bots.forEach((bot) => {
-      const discordClient = new DiscordClient(bot.token);
-      discordClient.login();
-      discordClient.guildCreate(db);
-      discordClient.messageCreate(db, strage);
-      discordClient.interactionCreate(db);
+      // 各種clientを稼働
+      const clientlController = new ClientlController(bot.token);
+      clientlController.login();
+      clientlController.guildCreate(db);
+      clientlController.messageCreate(db, strage);
+      clientlController.interactionCreate(db);
     });
   }
 })();

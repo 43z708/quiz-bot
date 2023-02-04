@@ -35,6 +35,7 @@ export const botDataConverter: FirestoreDataConverter<BotData> = {
   },
 };
 
+// botsコレクションのデータ型
 export interface BotData {
   id: string;
   isAvailable: boolean;
@@ -47,6 +48,10 @@ export class BotModel {
   constructor(db: admin.firestore.Firestore) {
     this.db = db;
   }
+  /**
+   * bot情報を取得
+   * @returns
+   */
   public async getBots(): Promise<BotData[]> {
     const bots = await this.db
       .collection('bots')

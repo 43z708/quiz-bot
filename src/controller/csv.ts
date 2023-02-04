@@ -1,21 +1,13 @@
-import {
-  Client,
-  Events,
-  Message,
-  GatewayIntentBits,
-  PermissionsBitField,
-  PermissionFlagsBits,
-  ChannelType,
-  OverwriteType,
-  GuildMember,
-} from 'discord.js';
-import { channelDataConverter, ChannelDataType } from '../models/channelModel';
+import { Message } from 'discord.js';
 import { QuestionModel } from '../models/questionModel';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
 import fetch from 'node-fetch';
 
-export class CsvCommand {
+/**
+ * csvに関する処理
+ */
+export class CsvController {
   /**
    * CSVのテンプレート出力
    * @param message
@@ -25,6 +17,7 @@ export class CsvCommand {
     message: Message,
     strage: admin.storage.Storage
   ): Promise<void> {
+    // strageに保存しているcsvテンプレートを返す
     const url = await strage
       .bucket()
       .file('template/quiz-template.csv')
@@ -48,23 +41,32 @@ export class CsvCommand {
     message: Message,
     db: admin.firestore.Firestore
   ): Promise<void> {
+    // メッセージに添付されたファイルのurl
     const urls = message.attachments.map((attachment) => attachment.url);
-    if (urls.length === 1 && urls[0]) {
+    if (
+      urls.length === 1 &&
+      urls[0] &&
+      urls[0].split(/#|?/)[0]?.split('.').pop()?.trim() === 'csv'
+    ) {
+      // csvファイル1つのみ
       const response = await fetch(urls[0]);
       const data = await response.text();
-      console.log(this.convertCSV(data));
       if (this.convertCSV(data).length !== 0) {
+        // CSVを配列に変換し、DBに保存
         await new QuestionModel(db).setQuestions(
           this.convertCSV(data),
           message.guildId ?? ''
         );
         await message.reply(utils.importSuccessReply);
       } else {
+        // csvが空や書式に合っていない
         message.reply(utils.importErrorFormatReply);
       }
     } else if (urls.length === 0) {
+      // 添付ファイルなし
       message.reply(utils.importErrorReply0);
     } else {
+      // 添付ファイルが多い
       message.reply(utils.importErrorReplyMoreThan2);
     }
   }

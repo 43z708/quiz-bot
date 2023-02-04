@@ -43,6 +43,7 @@ export const userDataConverter: FirestoreDataConverter<UserData> = {
   },
 };
 
+// usersコレクションのデータ型
 export interface UserData {
   guildId: string;
   id: string;
@@ -60,6 +61,16 @@ export class UserModel {
     this.db = db;
   }
 
+  /**
+   * ユーザー情報を保存（ユーザーが現在何番を解いていて、いつが締切かなど）
+   * @param user
+   * @param guildId
+   * @param questions
+   * @param startedAt
+   * @param deadline
+   * @param order
+   * @param round
+   */
   public async setUser(
     user: User,
     guildId: string,
@@ -92,6 +103,12 @@ export class UserModel {
     }
   }
 
+  /**
+   * ユーザー情報を取得
+   * @param userId
+   * @param guildId
+   * @returns
+   */
   public async getUser(
     userId: string,
     guildId: string
