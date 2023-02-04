@@ -13,7 +13,7 @@ import {
 } from 'discord.js';
 
 import admin from 'firebase-admin';
-import utils from '../utils.json';
+import { utils } from '../utils';
 import { GuildModel, GuildData } from '../models/guildModel';
 
 export class GuildCommand {

@@ -13,7 +13,7 @@ import { ChannelCommand } from './channel';
 import { QuizCommand } from './quiz';
 import { GuildCommand } from './guild';
 import admin from 'firebase-admin';
-import utils from '../utils.json';
+import { utils } from '../utils';
 import { ChannelData } from '../models/channelModel';
 
 export class DiscordClient {

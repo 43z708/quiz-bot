@@ -6,15 +6,19 @@ import {
   Guild,
   PermissionFlagsBits,
   ChannelType,
-  OverwriteType,
+  EmbedBuilder,
   StringSelectMenuInteraction,
   ActionRowBuilder,
   StringSelectMenuBuilder,
 } from 'discord.js';
 
 import admin from 'firebase-admin';
-import utils from '../utils.json';
-import { QuestionModel } from '../models/questionModel';
+import { utils } from '../utils';
+import {
+  QuestionModel,
+  QuestionData,
+  AnswerType,
+} from '../models/questionModel';
 import { UserModel } from '../models/userModel';
 import { GuildCommand } from './guild';
 import { GuildData } from '../models/guildModel';
@@ -30,6 +34,7 @@ export class QuizCommand {
     db: admin.firestore.Firestore
   ): Promise<void> {
     if (message.guildId) {
+      await message.channel.sendTyping();
       const userModel = new UserModel(db);
       const response = await Promise.all([
         userModel.getUser(message.author.id, message.guildId),
@@ -52,17 +57,18 @@ export class QuizCommand {
           ? randomlySortedQuestionIds
           : randomlySortedQuestionIds.slice(0, numberOfQuestions);
 
+      const deadline = this.exportDeadline(new Date(), cooltime);
+
       if (user) {
-        const deadline = this.exportDeadline(user.startedAt.toDate(), cooltime);
         const now = new Date().getTime();
 
         // 2回目以降cooltime未満ならスルー
-        if (now <= deadline.deadlineTime) {
+        if (now <= user.deadline.toDate().getTime()) {
           await message.reply(utils.coolTimeError);
           return;
         } else {
           // 2回目以降cooltime以降なら最初からやり直し
-          userModel.setUser(
+          await userModel.setUser(
             message.author,
             message.guildId,
             roundedQuestionIds,
@@ -74,8 +80,8 @@ export class QuizCommand {
         }
       } else {
         // 初回=>dbつくってランダムを返す
-        const deadline = this.exportDeadline(new Date(), cooltime);
-        userModel.setUser(
+
+        await userModel.setUser(
           message.author,
           message.guildId,
           roundedQuestionIds,
@@ -85,10 +91,20 @@ export class QuizCommand {
           0
         );
       }
-      await message.reply({
-        content: 'Pong!',
-        components: [this.quizComponent()],
-      });
+
+      // クイズ1問目を出題
+      if (roundedQuestionIds[0]) {
+        const component = await this.getQuizComponent(
+          message.author.id,
+          message.guildId,
+          0,
+          roundedQuestionIds.length,
+          deadline.deadlineTime,
+          roundedQuestionIds[0],
+          db
+        );
+        await message.reply(component);
+      }
     }
   }
 
@@ -115,58 +131,119 @@ export class QuizCommand {
     // ユーザーとサーバーが一致している
     if (
       user.id === interaction.user.id &&
-      user.guildId === interaction.guildId
+      user.guildId === interaction.guildId &&
+      user.questions[user.order] === interaction.customId
     ) {
+      await interaction.channel?.sendTyping();
+
       const deadline = user.deadline.toDate();
       const now = new Date();
 
       if (now.getTime() < deadline.getTime()) {
         // cooltime以内
-        if (user.order + 1 === user.questions.length) {
+        if (user.order + 1 >= user.questions.length) {
           // 最後の問題(userModelは変更の必要なし)
           // 終わりのメッセージ
+          interaction.reply(`<@!${user.id}> ${utils.quizEnd}`);
         } else {
-          // 途中の問題
-          userModel.setUser(
-            interaction.user,
-            interaction.guildId!,
-            user.questions,
-            user.startedAt,
-            user.deadline,
-            user.order + 1,
-            user.round
-          );
           // 次の問題を出題
+          const response = await Promise.all([
+            this.getQuizComponent(
+              interaction.user.id,
+              interaction.guildId,
+              user.order + 1,
+              user.questions.length,
+              deadline.getTime(),
+              user.questions[user.order + 1]!,
+              db
+            ),
+            userModel.setUser(
+              interaction.user,
+              interaction.guildId!,
+              user.questions,
+              user.startedAt,
+              user.deadline,
+              user.order + 1,
+              user.round
+            ),
+          ]);
+          await interaction.reply(response[0]);
         }
       } else {
         // cooltime以降
         if (user.order + 1 === user.questions.length) {
           // 最後の問題で存在しないinteractionのはずなのでエラーを返す
+          await interaction.reply(`<@!${user.id}> ${utils.systemError}`);
         } else {
           // 途中の問題で時間経過してしまっているのでやり直すようメッセージ
+          interaction.reply(`<@!${user.id}> ${utils.quizRetry}`);
         }
       }
     }
   }
 
-  public static quizComponent(): ActionRowBuilder<StringSelectMenuBuilder> {
-    return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+  public static async getQuizComponent(
+    userId: string,
+    guildId: string,
+    order: number,
+    numberOfQuestions: number,
+    deadlineTime: number, //ミリ秒
+    questionId: string,
+    db: admin.firestore.Firestore
+  ): Promise<any> {
+    const questionData = await new QuestionModel(db).getQuestion(
+      questionId,
+      guildId
+    );
+    if (!questionData) {
+      return;
+    }
+    const unixtime = Math.floor(deadlineTime / 1000);
+    const content = `<@!${userId}>\n ${utils.questionNumber(
+      order,
+      numberOfQuestions
+    )}\n ${utils.deadline}: <t:${unixtime}:f>`;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x0099ff)
+      .setTitle(questionData.question);
+    questionData.options;
+    type key = 'A' | 'B' | 'C' | 'D';
+    const randomlySortedKeys: AnswerType[] = this.shuffleArray([
+      'A',
+      'B',
+      'C',
+      'D',
+    ]);
+
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
       new StringSelectMenuBuilder()
-        .setCustomId('select')
-        .setPlaceholder('Nothing selected')
+        .setCustomId(questionData.id)
+        .setPlaceholder(utils.placeholder)
         .addOptions(
           {
-            label: 'Select me',
-            description: 'This is a description',
-            value: 'first_option',
+            label: `1. ${questionData.options[randomlySortedKeys[0]!]}`,
+            value: randomlySortedKeys[0]!,
           },
           {
-            label: 'You can select me too',
-            description: 'This is also a description',
-            value: 'second_option',
+            label: `2. ${questionData.options[randomlySortedKeys[1]!]}`,
+            value: randomlySortedKeys[1]!,
+          },
+          {
+            label: `3. ${questionData.options[randomlySortedKeys[2]!]}`,
+            value: randomlySortedKeys[2]!,
+          },
+          {
+            label: `4. ${questionData.options[randomlySortedKeys[3]!]}`,
+            value: randomlySortedKeys[3]!,
           }
         )
     );
+    return {
+      content: content,
+      embeds: [embed],
+      components: [row],
+    };
   }
 
   public static shuffleArray<T>(array: T[]): T[] {

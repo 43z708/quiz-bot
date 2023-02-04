@@ -130,4 +130,27 @@ export class QuestionModel {
     });
     return questionIds;
   }
+
+  public async getQuestion(
+    questionId: string,
+    guildId: string
+  ): Promise<QuestionData | null> {
+    const data = await (
+      await this.db
+        .collection('guilds')
+        .doc(guildId)
+        .collection('questions')
+        .doc(questionId)
+        .get()
+    ).data();
+    return data
+      ? {
+          id: data.id,
+          guildId: data.guildId,
+          question: data.question,
+          options: data.options,
+          answer: data.answer,
+        }
+      : null;
+  }
 }

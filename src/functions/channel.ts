@@ -16,7 +16,7 @@ import {
   ChannelDataType,
 } from '../models/channelModel';
 import admin from 'firebase-admin';
-import utils from '../utils.json';
+import { utils } from '../utils';
 
 export class ChannelCommand {
   /**

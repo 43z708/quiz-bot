@@ -12,7 +12,7 @@ import {
 import { channelDataConverter, ChannelDataType } from '../models/channelModel';
 import { QuestionModel } from '../models/questionModel';
 import admin from 'firebase-admin';
-import utils from '../utils.json';
+import { utils } from '../utils';
 import fetch from 'node-fetch';
 
 export class CsvCommand {
