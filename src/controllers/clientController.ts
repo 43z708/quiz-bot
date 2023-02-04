@@ -148,7 +148,7 @@ export class ClientlController {
         message.content === utils.quizImportCommandName &&
         isQuizManagementChannel
       ) {
-        await CsvController.importCsv(message, db);
+        await CsvController.importQuestions(message, db);
       }
       // 回答一覧csv出力(quiz-managementチャンネルのみ)
       if (
@@ -157,6 +157,7 @@ export class ClientlController {
         isQuizManagementChannel
       ) {
         console.log('quiz-answers');
+        await CsvController.exportAnswers(message, db);
       }
       // クイズ開始(quizチャンネルのみ)
       if (message.content === utils.quizStartCommandName && isQuizChannel) {

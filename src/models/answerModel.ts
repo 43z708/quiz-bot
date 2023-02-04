@@ -100,6 +100,11 @@ export interface AnswerDetailData {
   createdAt?: admin.firestore.Timestamp;
 }
 
+// csv変換のためのanswerコレクションデータ型
+export interface AnswerDataForCsv extends AnswerData {
+  answerDetails: AnswerDetailData[];
+}
+
 // AnswerCreate関数のparam
 export interface AnswerCreateParams {
   answerId: string;
@@ -222,5 +227,27 @@ export class AnswerModel {
     }
   }
 
-  public async index(): Promise<void> {}
+  public async index(message: Message): Promise<any> {
+    try {
+      const batch = this.db.batch();
+      if (!message.guildId) {
+        return null;
+      }
+      const collection = this.db
+        .collection('guilds')
+        .doc(message.guildId)
+        .collection('answers');
+      const answerDocs = await collection.where('finishedAt', '!=', null).get();
+      const answers: AnswerData[] = [];
+      answerDocs.forEach((doc) => {
+        answers.push(answerDataConverter.fromFirestore(doc));
+      });
+
+      // AnswerData型を再帰的にAnswerDataForCsvに変換して返したい
+
+      await batch.commit();
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
