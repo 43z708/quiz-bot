@@ -5,6 +5,7 @@ import { utils } from '../utils';
 import fetch from 'node-fetch';
 import { CsvService } from '../services/csvService';
 import { AnswerModel } from '../models/answerModel';
+import { AnswerService } from '../services/answerService';
 /**
  * csvに関する処理
  */
@@ -78,5 +79,8 @@ export class CsvController {
   ): Promise<void> {
     const answerModel = new AnswerModel(db);
     const answers = await answerModel.index(message);
+    if (answers) {
+      AnswerService.formatCsv(answers);
+    }
   }
 }

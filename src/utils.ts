@@ -26,4 +26,13 @@ export const utils = {
   systemError: 'システムエラーが発生しています。管理者に問い合わせてください。',
   quizRetry:
     '制限時間を超過しています。もう一度!quiz-startでクイズをやり直してください。',
+  csvHeader: {
+    userName: '回答者',
+    percentageOfCorrects: '正答率',
+    startedAt: 'クイズ開始時間',
+    duration: '回答時間',
+    round: '何回目',
+    numberOfCorrects: '正解数',
+    numberOfQuestions: '出題数',
+  },
 };

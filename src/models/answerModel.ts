@@ -86,7 +86,7 @@ export interface AnswerData {
   userName: string;
   startedAt: admin.firestore.Timestamp;
   finishedAt: admin.firestore.Timestamp | null; //終了時刻
-  duration: number | null; // 回答時間
+  duration: number | null; // 回答時間(ミリ秒)
   round: number;
   numberOfQuestions: number;
 }
@@ -227,15 +227,14 @@ export class AnswerModel {
     }
   }
 
-  public async index(message: Message): Promise<any> {
+  public async index(
+    message: Message
+  ): Promise<AnswerDataForCsv[] | undefined> {
     try {
       const batch = this.db.batch();
-      if (!message.guildId) {
-        return null;
-      }
       const collection = this.db
         .collection('guilds')
-        .doc(message.guildId)
+        .doc(message.guildId!)
         .collection('answers');
       const answerDocs = await collection.where('finishedAt', '!=', null).get();
       const answers: AnswerData[] = [];
@@ -244,8 +243,23 @@ export class AnswerModel {
       });
 
       // AnswerData型を再帰的にAnswerDataForCsvに変換して返したい
-
+      const answerDataForCsv = await Promise.all(
+        answers.map(async (answer) => {
+          const docs = await collection
+            .doc(answer.id)
+            .collection('amswerDetails')
+            .get();
+          const answerDetails: AnswerDetailData[] = [];
+          docs.forEach((doc) => {
+            answerDetails.push(answerDetailDataConverter.fromFirestore(doc));
+          });
+          answer;
+          (answer as AnswerDataForCsv).answerDetails = answerDetails;
+          return answer as AnswerDataForCsv;
+        })
+      );
       await batch.commit();
+      return answerDataForCsv;
     } catch (e) {
       console.error(e);
     }
