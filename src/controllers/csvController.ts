@@ -6,6 +6,8 @@ import fetch from 'node-fetch';
 import { CsvService } from '../services/csvService';
 import { AnswerModel } from '../models/answerModel';
 import { AnswerService } from '../services/answerService';
+import * as path from 'path';
+import * as url from 'url';
 /**
  * csvに関する処理
  */
@@ -45,18 +47,19 @@ export class CsvController {
   ): Promise<void> {
     // メッセージに添付されたファイルのurl
     const urls = message.attachments.map((attachment) => attachment.url);
-    if (
-      urls.length === 1 &&
-      urls[0] &&
-      urls[0].split(/#|?/)[0]?.split('.').pop()?.trim() === 'csv'
-    ) {
+    const parsedUrl = urls[0] ? url.parse(urls[0]) : null;
+    const ext =
+      parsedUrl && parsedUrl.pathname ? path.extname(parsedUrl.pathname) : '';
+
+    if (urls.length === 1 && urls[0] && ext === '.csv') {
+      await message.channel.sendTyping();
       // csvファイル1つのみ
       const response = await fetch(urls[0]);
       const data = await response.text();
-      if (CsvService.convertCSV(data).length !== 0) {
+      if (CsvService.convertFromCsvToArray(data).length !== 0) {
         // CSVを配列に変換し、DBに保存
         await new QuestionModel(db).setQuestions(
-          CsvService.convertCSV(data),
+          CsvService.convertFromCsvToArray(data),
           message.guildId ?? ''
         );
         await message.reply(utils.importSuccessReply);
@@ -79,8 +82,15 @@ export class CsvController {
   ): Promise<void> {
     const answerModel = new AnswerModel(db);
     const answers = await answerModel.index(message);
+    console.log({ answers });
     if (answers) {
-      AnswerService.formatCsv(answers);
+      const answersForCsv = AnswerService.formatCsv(answers);
+      console.log({ answersForCsv });
+      if (answersForCsv) {
+        const file = await CsvService.convertFromArrayToCsv(answersForCsv);
+        console.log({ file });
+        message.reply({ files: [file] });
+      }
     }
   }
 }

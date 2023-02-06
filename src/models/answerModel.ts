@@ -60,6 +60,7 @@ export const answerDetailDataConverter: FirestoreDataConverter<AnswerDetailData>
         correct: data.correct,
         answer: data.answer,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: data.updatedAt,
       };
     },
 
@@ -74,6 +75,7 @@ export const answerDetailDataConverter: FirestoreDataConverter<AnswerDetailData>
         correct: data.correct,
         answer: data.answer,
         createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
       };
     },
   };
@@ -98,6 +100,7 @@ export interface AnswerDetailData {
   correct: string; // 正解
   answer: string | null; // 回答
   createdAt?: admin.firestore.Timestamp;
+  updatedAt?: admin.firestore.Timestamp;
 }
 
 // csv変換のためのanswerコレクションデータ型
@@ -138,12 +141,12 @@ export class AnswerModel {
    * @param guildId
    * @returns
    */
-  public createId(guildId: string): string {
-    const collection = this.db
+  public async createId(guildId: string): Promise<string> {
+    return await this.db
       .collection('guilds')
       .doc(guildId)
-      .collection('answers');
-    return collection.id;
+      .collection('answers')
+      .doc().id;
   }
 
   /**
@@ -219,6 +222,7 @@ export class AnswerModel {
         }),
         subCollection.doc(params.questionId).update({
           answer: params.answer,
+          updatedAt: admin.firestore.Timestamp.fromDate(new Date()),
         }),
       ]);
       await batch.commit();

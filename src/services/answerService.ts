@@ -16,11 +16,16 @@ export class AnswerService {
     const questionIds: string[] = Array.from(
       new Set(duplicatedQuestions.map((question) => question.id))
     );
-    // idとtextの両方
-    const questions: { id: string; text: string }[] =
-      duplicatedQuestions.filter((question) =>
-        questionIds.some((questionId) => questionId === question.id)
-      );
+    // idとtextの両方x
+
+    const questions: { id: string; text: string }[] = questionIds.map((id) => {
+      return {
+        id: id,
+        text:
+          duplicatedQuestions.find((question) => question.id === id)?.text ??
+          '',
+      };
+    });
     // textのみ
     const questionTexts: string[] = questions.map((question) => question.text);
 
@@ -62,7 +67,7 @@ export class AnswerService {
       });
       return firstHalf.concat(secondHalf);
     });
-
-    return body.splice(0, 0, header);
+    body.unshift(header);
+    return body;
   }
 }

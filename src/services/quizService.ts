@@ -87,6 +87,7 @@ export class QuizService {
       content: content,
       embeds: [embed],
       components: [row],
+      ephemeral: true,
     };
   }
 

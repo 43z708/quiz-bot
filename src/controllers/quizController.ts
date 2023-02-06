@@ -33,7 +33,7 @@ export class QuizController {
       const userModel = new UserModel(db);
       const answerModel = new AnswerModel(db);
       // 一連の回答に対する一意なidを付与する
-      const answerId = answerModel.createId(message.guildId);
+      const answerId = await answerModel.createId(message.guildId);
 
       // ユーザー情報、全問題ID、サーバー情報を取得
       const response = await Promise.all([
@@ -46,6 +46,10 @@ export class QuizController {
       const questionIds: string[] = questions.map((question) => question.id);
       const guildData: GuildData | null = response[2];
       if (!guildData) {
+        return;
+      }
+      // そもそもクイズがなかったら無視
+      if (questions.length === 0) {
         return;
       }
       // クールタイム
@@ -62,7 +66,7 @@ export class QuizController {
 
       // 現在時刻からクールタイムを考慮した締切時間を算出
       const now = new Date();
-      const deadline = QuizService.exportDeadline(now, cooltime);
+      const deadline = QuizService.exportDeadline(new Date(), cooltime);
 
       if (roundedQuestionIds[0]) {
         // クイズ1問目を送信
@@ -135,101 +139,103 @@ export class QuizController {
     interaction: StringSelectMenuInteraction,
     db: admin.firestore.Firestore
   ): Promise<void> {
-    const userModel = new UserModel(db);
-    const user = await userModel.getUser(
-      interaction.user.id,
-      interaction.guildId!
-    );
+    try {
+      const userModel = new UserModel(db);
+      const user = await userModel.getUser(
+        interaction.user.id,
+        interaction.guildId!
+      );
 
-    // user情報が存在しない場合エラー
-    if (!user) {
-      interaction.reply(utils.noUserInfo);
-      return;
-    }
+      // user情報が存在しない場合エラー
+      if (!user) {
+        await interaction.reply(utils.noUserInfo);
+        return;
+      }
 
-    // customIdからanswerIdとquestionIdを取得
-    const obj = QuizService.fromCustomId(interaction.customId);
-    if (obj === null) {
-      return;
-    }
-    const answerId = obj.answerId;
-    const questionId = obj.questionId;
-    // interaction情報に対し、ユーザー、サーバー、クイズの問題IDの一致を確認し、interaction.values[0]つまり回答が返ってきていることを確認
-    if (
-      user.id === interaction.user.id &&
-      user.guildId === interaction.guildId &&
-      user.questions[user.order] === questionId &&
-      interaction.values[0]
-    ) {
-      // 処理に時間がかかるため入力中フラグ
-      await interaction.channel?.sendTyping();
+      // customIdからanswerIdとquestionIdを取得
+      const obj = QuizService.fromCustomId(interaction.customId);
+      if (obj === null) {
+        return;
+      }
+      const answerId = obj.answerId;
+      const questionId = obj.questionId;
+      // interaction情報に対し、ユーザー、サーバー、クイズの問題IDの一致を確認し、interaction.values[0]つまり回答が返ってきていることを確認
+      if (
+        user.id === interaction.user.id &&
+        user.guildId === interaction.guildId &&
+        user.questions[user.order] === questionId &&
+        interaction.values[0]
+      ) {
+        const deadline = user.deadline.toDate();
+        const now = new Date();
 
-      const deadline = user.deadline.toDate();
-      const now = new Date();
+        const answerModel = new AnswerModel(db);
 
-      const answerModel = new AnswerModel(db);
-
-      if (now.getTime() < deadline.getTime()) {
-        // 締切時間前
-        if (user.order + 1 >= user.questions.length) {
-          // 最後の問題(userModelは変更の必要なし)
-          await answerModel.update({
-            answerId: answerId,
-            guildId: user.guildId,
-            userId: user.id,
-            startedAt: user.startedAt,
-            finishedAt: admin.firestore.Timestamp.fromDate(now),
-            round: user.round,
-            questionId: questionId,
-            answer: interaction.values[0],
-          });
-          // 終了メッセージを送信
-          interaction.reply(`<@!${user.id}> ${utils.quizEnd}`);
-        } else {
-          // 次の問題を出題、ユーザー情報を更新
-          const response = await Promise.all([
-            QuizService.getQuizComponent(
-              interaction.user.id,
-              interaction.guildId,
-              answerId,
-              user.order + 1,
-              user.questions.length,
-              deadline.getTime(),
-              user.questions[user.order + 1]!,
-              db
-            ),
-            userModel.setUser(
-              interaction.user,
-              interaction.guildId!,
-              user.questions,
-              user.startedAt,
-              user.deadline,
-              user.order + 1,
-              user.round
-            ),
-            answerModel.update({
+        if (now.getTime() < deadline.getTime()) {
+          await interaction.deferReply();
+          // 締切時間前
+          if (user.order + 1 >= user.questions.length) {
+            // 最後の問題(userModelは変更の必要なし)
+            await answerModel.update({
               answerId: answerId,
               guildId: user.guildId,
               userId: user.id,
               startedAt: user.startedAt,
-              finishedAt: null,
+              finishedAt: admin.firestore.Timestamp.fromDate(now),
               round: user.round,
               questionId: questionId,
               answer: interaction.values[0],
-            }),
-          ]);
-          await interaction.reply(response[0]);
-        }
-      } else {
-        // 締切時間を過ぎた
-        if (user.order + 1 > user.questions.length) {
-          // 存在しないinteractionのはずなのでエラーを返す
-          await interaction.reply(`<@!${user.id}> ${utils.systemError}`);
+            });
+            // 終了メッセージを送信
+            interaction.editReply(`<@!${user.id}> ${utils.quizEnd}`);
+          } else {
+            // 次の問題を出題、ユーザー情報を更新
+            const response = await Promise.all([
+              QuizService.getQuizComponent(
+                interaction.user.id,
+                interaction.guildId,
+                answerId,
+                user.order + 1,
+                user.questions.length,
+                deadline.getTime(),
+                user.questions[user.order + 1]!,
+                db
+              ),
+              userModel.setUser(
+                interaction.user,
+                interaction.guildId!,
+                user.questions,
+                user.startedAt,
+                user.deadline,
+                user.order + 1,
+                user.round
+              ),
+              answerModel.update({
+                answerId: answerId,
+                guildId: user.guildId,
+                userId: user.id,
+                startedAt: user.startedAt,
+                finishedAt: null,
+                round: user.round,
+                questionId: questionId,
+                answer: interaction.values[0],
+              }),
+            ]);
+            await interaction.editReply(response[0]);
+          }
         } else {
-          // 全問題を回答する前に時間経過してしまっているのでやり直すようメッセージ
-          interaction.reply(`<@!${user.id}> ${utils.quizRetry}`);
+          // 締切時間を過ぎた
+          if (user.order + 1 > user.questions.length) {
+            // 存在しないinteractionのはずなのでエラーを返す
+            await interaction.reply(`<@!${user.id}> ${utils.systemError}`);
+          } else {
+            // 全問題を回答する前に時間経過してしまっているのでやり直すようメッセージ
+            interaction.reply(`<@!${user.id}> ${utils.quizRetry}`);
+          }
         }
       }
+    } catch (e) {
+      console.error(e);
     }
   }
 }

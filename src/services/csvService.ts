@@ -1,10 +1,13 @@
+import * as fs from 'fs';
+import * as stringifySync from 'csv-stringify/sync';
+
 export class CsvService {
   /**
    * CSVを配列に変換
    * @param csvdata
    * @returns
    */
-  static convertCSV(csvdata: string): string[][] {
+  static convertFromCsvToArray(csvdata: string): string[][] {
     const resultdata: string[][] = []; // データを入れるための配列
     csvdata = csvdata.replace(/\r\n/g, '\n'); //IE対策　改行コード\r\nを\rに変換
     csvdata = csvdata.replace(/^(\n+)|(\n+)$/g, ''); //文頭と文末の余計な改行を除去
@@ -31,5 +34,14 @@ export class CsvService {
     } else {
       return [];
     }
+  }
+
+  static async convertFromArrayToCsv(records: string[][]): Promise<string> {
+    const csvString = stringifySync.stringify(records, {
+      header: false,
+    });
+
+    await fs.writeFileSync('/mnt/src/.tmp/output.csv', csvString);
+    return '/mnt/src/.tmp/output.csv';
   }
 }
