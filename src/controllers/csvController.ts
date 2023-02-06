@@ -80,17 +80,22 @@ export class CsvController {
     message: Message,
     db: admin.firestore.Firestore
   ): Promise<void> {
+    await message.channel.sendTyping();
     const answerModel = new AnswerModel(db);
     const answers = await answerModel.index(message);
-    console.log({ answers });
     if (answers) {
       const answersForCsv = AnswerService.formatCsv(answers);
-      console.log({ answersForCsv });
-      if (answersForCsv) {
-        const file = await CsvService.convertFromArrayToCsv(answersForCsv);
-        console.log({ file });
+      if (message.guildId && answersForCsv) {
+        const file = await CsvService.convertFromArrayToCsv(
+          message.guildId,
+          answersForCsv
+        );
         message.reply({ files: [file] });
+      } else {
+        message.reply(utils.csvExportError);
       }
+    } else {
+      message.reply(utils.csvExportError);
     }
   }
 }

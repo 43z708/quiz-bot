@@ -81,6 +81,7 @@ export class QuizController {
           db
         );
         await message.reply(component);
+        await message.delete();
       }
 
       // dbの整理
@@ -187,7 +188,8 @@ export class QuizController {
               answer: interaction.values[0],
             });
             // 終了メッセージを送信
-            interaction.editReply(`<@!${user.id}> ${utils.quizEnd}`);
+            await interaction.editReply(`<@!${user.id}> ${utils.quizEnd}`);
+            await interaction.message.delete();
           } else {
             // 次の問題を出題、ユーザー情報を更新
             const response = await Promise.all([
@@ -222,15 +224,18 @@ export class QuizController {
               }),
             ]);
             await interaction.editReply(response[0]);
+            await interaction.message.delete();
           }
         } else {
           // 締切時間を過ぎた
           if (user.order + 1 > user.questions.length) {
             // 存在しないinteractionのはずなのでエラーを返す
             await interaction.reply(`<@!${user.id}> ${utils.systemError}`);
+            await interaction.message.delete();
           } else {
             // 全問題を回答する前に時間経過してしまっているのでやり直すようメッセージ
-            interaction.reply(`<@!${user.id}> ${utils.quizRetry}`);
+            await interaction.reply(`<@!${user.id}> ${utils.quizRetry}`);
+            await interaction.message.delete();
           }
         }
       }

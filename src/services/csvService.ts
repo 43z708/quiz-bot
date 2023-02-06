@@ -36,12 +36,17 @@ export class CsvService {
     }
   }
 
-  static async convertFromArrayToCsv(records: string[][]): Promise<string> {
+  static async convertFromArrayToCsv(
+    guildId: string,
+    records: string[][]
+  ): Promise<string> {
+    records;
     const csvString = stringifySync.stringify(records, {
       header: false,
+      bom: true,
     });
 
-    await fs.writeFileSync('/mnt/src/.tmp/output.csv', csvString);
+    await fs.writeFileSync(`/mnt/src/.tmp/answers-${guildId}.csv`, csvString);
     return '/mnt/src/.tmp/output.csv';
   }
 }

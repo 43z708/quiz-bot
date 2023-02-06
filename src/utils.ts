@@ -35,4 +35,5 @@ export const utils = {
     numberOfCorrects: '正解数',
     numberOfQuestions: '出題数',
   },
+  csvExportError: 'データの読み込みの際にエラーが発生しています。',
 };
