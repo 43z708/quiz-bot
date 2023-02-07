@@ -46,7 +46,9 @@ export class CsvService {
       bom: true,
     });
 
-    await fs.writeFileSync(`/mnt/src/.tmp/answers-${guildId}.csv`, csvString);
-    return '/mnt/src/.tmp/output.csv';
+    const path = `/mnt/src/.tmp/answers-${guildId}.csv`;
+
+    await fs.writeFileSync(path, csvString);
+    return path;
   }
 }

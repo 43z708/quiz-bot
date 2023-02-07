@@ -67,6 +67,16 @@ export class QuizController {
       // 現在時刻からクールタイムを考慮した締切時間を算出
       const now = new Date();
       const deadline = QuizService.exportDeadline(new Date(), cooltime);
+      const nowTime = now.getTime();
+
+      if (user && nowTime <= user.deadline.toDate().getTime()) {
+        // クイズ2回目以降の回答(すでにユーザー情報があるため)
+        // 締切時間前にクイズを!quiz-startで再開することはできない。(discord上でcooltime設定を変えている可能性を考慮)
+        await message.reply(utils.coolTimeError).then((msg) => {
+          setTimeout(() => msg.delete(), 10000);
+        });
+        return;
+      }
 
       if (roundedQuestionIds[0]) {
         // クイズ1問目を送信
@@ -81,31 +91,21 @@ export class QuizController {
           db
         );
         await message.reply(component);
-        await message.delete();
       }
 
       // dbの整理
       if (user) {
-        // クイズ2回目以降の回答(すでにユーザー情報があるため)
-        const nowTime = now.getTime();
-
-        if (nowTime <= user.deadline.toDate().getTime()) {
-          // 締切時間前にクイズを!quiz-startで再開することはできない。(discord上でcooltime設定を変えている可能性を考慮)
-          await message.reply(utils.coolTimeError);
-          return;
-        } else {
-          // cooltimeを過ぎているため、!quiz-startを許可
-          // ユーザー情報を更新
-          await userModel.setUser(
-            message.author,
-            message.guildId,
-            roundedQuestionIds,
-            admin.firestore.Timestamp.fromDate(now),
-            admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
-            0,
-            user.round + 1
-          );
-        }
+        // cooltimeを過ぎているため、!quiz-startを許可
+        // ユーザー情報を更新
+        await userModel.setUser(
+          message.author,
+          message.guildId,
+          roundedQuestionIds,
+          admin.firestore.Timestamp.fromDate(now),
+          admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
+          0,
+          user.round + 1
+        );
       } else {
         // 初回なのでユーザー情報を保存
         await userModel.setUser(
@@ -127,6 +127,8 @@ export class QuizController {
         questions: questions,
         numberOfQuestions: roundedQuestionIds.length,
       });
+
+      await message.delete();
     }
   }
 
@@ -173,7 +175,6 @@ export class QuizController {
         const answerModel = new AnswerModel(db);
 
         if (now.getTime() < deadline.getTime()) {
-          await interaction.deferReply();
           // 締切時間前
           if (user.order + 1 >= user.questions.length) {
             // 最後の問題(userModelは変更の必要なし)
@@ -188,9 +189,15 @@ export class QuizController {
               answer: interaction.values[0],
             });
             // 終了メッセージを送信
-            await interaction.editReply(`<@!${user.id}> ${utils.quizEnd}`);
+            await interaction.channel
+              ?.send(`<@!${user.id}> ${utils.quizEnd}`)
+              .then((msg) => {
+                setTimeout(() => msg.delete(), 10000);
+              });
             await interaction.message.delete();
           } else {
+            await interaction.deferReply();
+
             // 次の問題を出題、ユーザー情報を更新
             const response = await Promise.all([
               QuizService.getQuizComponent(
@@ -230,11 +237,19 @@ export class QuizController {
           // 締切時間を過ぎた
           if (user.order + 1 > user.questions.length) {
             // 存在しないinteractionのはずなのでエラーを返す
-            await interaction.reply(`<@!${user.id}> ${utils.systemError}`);
+            await interaction.channel
+              ?.send(`<@!${user.id}> ${utils.systemError}`)
+              .then((msg) => {
+                setTimeout(() => msg.delete(), 10000);
+              });
             await interaction.message.delete();
           } else {
             // 全問題を回答する前に時間経過してしまっているのでやり直すようメッセージ
-            await interaction.reply(`<@!${user.id}> ${utils.quizRetry}`);
+            await interaction.channel
+              ?.send(`<@!${user.id}> ${utils.quizRetry}`)
+              .then((msg) => {
+                setTimeout(() => msg.delete(), 10000);
+              });
             await interaction.message.delete();
           }
         }

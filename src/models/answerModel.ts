@@ -100,7 +100,7 @@ export interface AnswerDetailData {
   correct: string; // 正解
   answer: string | null; // 回答
   createdAt?: admin.firestore.Timestamp;
-  updatedAt?: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp | null;
 }
 
 // csv変換のためのanswerコレクションデータ型
@@ -185,6 +185,7 @@ export class AnswerModel {
               question: question.question,
               correct: question.correct,
               answer: null,
+              updatedAt: null,
             })
           )
         )

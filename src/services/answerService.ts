@@ -43,9 +43,11 @@ export class AnswerService {
       const numberOfCorrects = answer.answerDetails.filter(
         (detail) => detail.answer === detail.correct
       ).length;
-      const duration = `${Math.floor(answer.duration! / 3600)}h${Math.floor(
-        (answer.duration! % 3600) / 60
-      )}m${answer.duration! % 60}`;
+      const milsec = answer.duration ?? 0;
+      const sec = Math.floor(milsec / 1000);
+      const duration = `${Math.floor(sec! / 3600)}h${Math.floor(
+        (sec! % 3600) / 60
+      )}m${sec! % 60}`;
       const firstHalf = [
         answer.userName,
         `${
