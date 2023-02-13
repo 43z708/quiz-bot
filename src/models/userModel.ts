@@ -135,4 +135,27 @@ export class UserModel {
 
     return userDocData;
   }
+
+  public async deleteAll(guildId: string): Promise<void> {
+    try {
+      const batch = this.db.batch();
+
+      const collection = await this.db
+        .collection('guilds')
+        .doc(guildId)
+        .collection('users');
+
+      const docs = await collection.get();
+      const docIds: string[] = [];
+      docs.forEach((doc) => {
+        docIds.push(doc.id);
+      });
+      for (const docId of docIds) {
+        await collection.doc(docId).delete();
+      }
+      await batch.commit();
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }

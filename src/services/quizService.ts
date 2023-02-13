@@ -31,25 +31,26 @@ export class QuizService {
     db: admin.firestore.Firestore
   ): Promise<any> {
     // 問題情報を取得
-    const questionData = await new QuestionModel(db).getQuestion(
-      questionId,
-      guildId
-    );
+    const questionData = await new QuestionModel(db).get(questionId, guildId);
     if (!questionData) {
       return;
     }
     // 制限時間をunix(秒単位)に直す
     const unixtime = Math.floor(deadlineTime / 1000);
     // メンション、問題番号、締切時間を表示
-    const content = `<@!${userId}>\n ${utils.questionNumber(
+    const content = `<@!${userId}>\n **${utils.questionNumber(
       order,
       numberOfQuestions
-    )}\n <t:${unixtime}:f> ${utils.deadline}`;
+    )}** \n <t:${unixtime}:f> ${utils.deadline}`;
 
     // 問題情報
     const embed = new EmbedBuilder()
       .setColor(0x0099ff)
-      .setTitle(questionData.question);
+      .setDescription(questionData.question.split('\\n').join('\n'));
+    // 画像URLがあれば添付する
+    if (!!questionData.imageUrl) {
+      embed.setImage(questionData.imageUrl);
+    }
     questionData.options;
     // 選択肢をシャッフル
     const randomlySortedKeys: CorrectType[] = this.shuffleArray([
@@ -87,7 +88,6 @@ export class QuizService {
       content: content,
       embeds: [embed],
       components: [row],
-      ephemeral: true,
     };
   }
 

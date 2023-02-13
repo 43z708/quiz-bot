@@ -156,12 +156,19 @@ export class ClientlController {
         message.content === utils.quizAnswersCommandName &&
         isQuizManagementChannel
       ) {
-        console.log('quiz-answers');
         await CsvController.exportAnswers(message, db);
       }
       // クイズ開始(quizチャンネルのみ)
       if (message.content === utils.quizStartCommandName && isQuizChannel) {
         await QuizController.start(message, db);
+      }
+      // quizチャンネルでadmin権限以外の人のコマンド以外の発言は消す
+      if (
+        message.content !== utils.quizStartCommandName &&
+        isQuizChannel &&
+        !this.isAdmin(message)
+      ) {
+        await message.delete();
       }
     });
   }

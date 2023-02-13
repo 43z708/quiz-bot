@@ -38,7 +38,7 @@ export class QuizController {
       // ユーザー情報、全問題ID、サーバー情報を取得
       const response = await Promise.all([
         userModel.getUser(message.author.id, message.guildId),
-        new QuestionModel(db).getAllQuestions(message.guildId),
+        new QuestionModel(db).index(message.guildId),
         GuildController.get(message.guildId, db),
       ]);
       const user = response[0];

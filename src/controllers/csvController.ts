@@ -1,5 +1,6 @@
 import { Message } from 'discord.js';
 import { QuestionModel } from '../models/questionModel';
+import { UserModel } from '../models/userModel';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
 import fetch from 'node-fetch';
@@ -50,7 +51,7 @@ export class CsvController {
     const parsedUrl = urls[0] ? url.parse(urls[0]) : null;
     const ext =
       parsedUrl && parsedUrl.pathname ? path.extname(parsedUrl.pathname) : '';
-
+    console.log({ ext });
     if (urls.length === 1 && urls[0] && ext === '.csv') {
       await message.channel.sendTyping();
       // csvファイル1つのみ
@@ -62,6 +63,8 @@ export class CsvController {
           CsvService.convertFromCsvToArray(data),
           message.guildId ?? ''
         );
+        // users内ドキュメントをすべて削除
+        await new UserModel(db).deleteAll(message.guildId ?? '');
         await message.reply(utils.importSuccessReply);
       } else {
         // csvが空や書式に合っていない
@@ -80,11 +83,18 @@ export class CsvController {
     message: Message,
     db: admin.firestore.Firestore
   ): Promise<void> {
+    if (!message.guildId) {
+      return;
+    }
     await message.channel.sendTyping();
+    const questionModel = new QuestionModel(db);
     const answerModel = new AnswerModel(db);
-    const answers = await answerModel.index(message);
-    if (answers) {
-      const answersForCsv = AnswerService.formatCsv(answers);
+    const [questions, answers] = await Promise.all([
+      questionModel.index(message.guildId),
+      answerModel.index(message),
+    ]);
+    if (questions && answers) {
+      const answersForCsv = AnswerService.formatCsv(questions, answers);
       if (message.guildId && answersForCsv) {
         const file = await CsvService.convertFromArrayToCsv(
           message.guildId,

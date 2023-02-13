@@ -18,6 +18,7 @@ export const questionDataConverter: FirestoreDataConverter<QuestionData> = {
       question: data.question,
       options: data.options,
       correct: data.correct,
+      imageUrl: data.imageUrl,
     };
   },
 
@@ -32,6 +33,7 @@ export const questionDataConverter: FirestoreDataConverter<QuestionData> = {
       question: data.question,
       options: data.options,
       correct: data.correct,
+      imageUrl: data.imageUrl,
     };
   },
 };
@@ -43,6 +45,7 @@ export interface QuestionData {
   question: string;
   options: OptionType;
   correct: CorrectType;
+  imageUrl: string | null;
 }
 
 export interface OptionType {
@@ -96,6 +99,7 @@ export class QuestionModel {
         const optionC = question[3];
         const optionD = question[4];
         const correctText = question[5];
+        const imageUrl = question[6] ?? null;
 
         if (
           questionText &&
@@ -114,6 +118,7 @@ export class QuestionModel {
               question: questionText,
               options: { A: optionA, B: optionB, C: optionC, D: optionD },
               correct: correctText,
+              imageUrl: imageUrl,
             })
           );
         }
@@ -129,7 +134,7 @@ export class QuestionModel {
    * @param guildId
    * @returns
    */
-  public async getAllQuestions(guildId: string): Promise<QuestionData[]> {
+  public async index(guildId: string): Promise<QuestionData[]> {
     const questionDocs = await this.db
       .collection('guilds')
       .doc(guildId)
@@ -148,7 +153,7 @@ export class QuestionModel {
    * @param guildId
    * @returns
    */
-  public async getQuestion(
+  public async get(
     questionId: string,
     guildId: string
   ): Promise<QuestionData | null> {
@@ -167,6 +172,7 @@ export class QuestionModel {
           question: data.question,
           options: data.options,
           correct: data.correct,
+          imageUrl: data.imageUrl,
         }
       : null;
   }

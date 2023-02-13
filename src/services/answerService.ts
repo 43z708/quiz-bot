@@ -1,33 +1,14 @@
 import { AnswerDataForCsv } from '../models/answerModel';
+import { QuestionData } from '../models/questionModel';
 import { utils } from '../utils';
 
 export class AnswerService {
-  public static formatCsv(answers: AnswerDataForCsv[]): string[][] {
+  public static formatCsv(
+    questions: QuestionData[],
+    answers: AnswerDataForCsv[]
+  ): string[][] {
     // userName: '回答者', percentageOfCorrects: '正答率', startedAt: 'クイズ開始時間', duration: '回答時間', round: '何回目', numberOfCorrects: '正解数', numberOfQuestions: '出題数',・・・
-    const duplicatedQuestions = answers
-      .map((answer) =>
-        answer.answerDetails.map((detail) => {
-          return { id: detail.id, text: detail.question };
-        })
-      )
-      .flat();
-
-    // idのみ
-    const questionIds: string[] = Array.from(
-      new Set(duplicatedQuestions.map((question) => question.id))
-    );
     // idとtextの両方x
-
-    const questions: { id: string; text: string }[] = questionIds.map((id) => {
-      return {
-        id: id,
-        text:
-          duplicatedQuestions.find((question) => question.id === id)?.text ??
-          '',
-      };
-    });
-    // textのみ
-    const questionTexts: string[] = questions.map((question) => question.text);
 
     const header: string[] = [
       utils.csvHeader.userName,
@@ -37,12 +18,17 @@ export class AnswerService {
       utils.csvHeader.round,
       utils.csvHeader.numberOfCorrects,
       utils.csvHeader.numberOfQuestions,
-    ].concat(questionTexts);
+    ].concat(questions.map((question) => question.question));
 
     const body = answers.map((answer) => {
-      const numberOfCorrects = answer.answerDetails.filter(
-        (detail) => detail.answer === detail.correct
-      ).length;
+      const numberOfCorrects = answer.answerDetails.filter((detail) => {
+        return (
+          detail.answer ===
+          questions.find((question) => {
+            return question.id === detail.id;
+          })?.correct
+        );
+      }).length;
       const milsec = answer.duration ?? 0;
       const sec = Math.floor(milsec / 1000);
       const duration = `${Math.floor(sec! / 3600)}h${Math.floor(
@@ -58,13 +44,14 @@ export class AnswerService {
           .toDate()
           .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}(JST)`,
         duration,
-        `${answer.round}`,
+        `${answer.round + 1}`,
         `${numberOfCorrects}`,
         `${answer.numberOfQuestions}`,
       ];
-      const secondHalf = questionIds.map((id) => {
+      const secondHalf = questions.map((question) => {
         return (
-          answer.answerDetails.find((detail) => detail.id === id)?.answer ?? ''
+          answer.answerDetails.find((detail) => detail.id === question.id)
+            ?.answer ?? ''
         );
       });
       return firstHalf.concat(secondHalf);
