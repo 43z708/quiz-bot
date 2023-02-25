@@ -116,7 +116,6 @@ export class ClientlController {
         });
         return;
       }
-
       // チャンネル情報を取得
       if (this.channels.length === 0) {
         this.channels = await ChannelController.getChannels(
@@ -139,7 +138,6 @@ export class ClientlController {
 
       // csvテンプレート出力(quiz-managementチャンネルのみ)
       if (
-        this.isAdmin(message) &&
         message.content === utils.quizTemplateCommandName &&
         isQuizManagementChannel
       ) {
@@ -156,7 +154,6 @@ export class ClientlController {
       }
       // 回答一覧csv出力(quiz-managementチャンネルのみ)
       if (
-        this.isAdmin(message) &&
         message.content === utils.quizAnswersCommandName &&
         isQuizManagementChannel
       ) {

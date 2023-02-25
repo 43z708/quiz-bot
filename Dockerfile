@@ -8,4 +8,4 @@ mkdir -p /mnt/src/.tmp
 
 WORKDIR /mnt/src
 
-# CMD  npm run start
+CMD  npm run start

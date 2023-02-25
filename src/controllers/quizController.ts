@@ -94,39 +94,27 @@ export class QuizController {
       }
 
       // dbの整理
-      if (user) {
-        // cooltimeを過ぎているため、!quiz-startを許可
-        // ユーザー情報を更新
-        await userModel.setUser(
+      // cooltimeを過ぎているため、!quiz-startを許可
+      // ユーザー情報を更新または作成
+      await Promise.all([
+        userModel.setUser(
           message.author,
           message.guildId,
           roundedQuestionIds,
           admin.firestore.Timestamp.fromDate(now),
           admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
           0,
-          user.round + 1
-        );
-      } else {
-        // 初回なのでユーザー情報を保存
-        await userModel.setUser(
-          message.author,
-          message.guildId,
-          roundedQuestionIds,
-          admin.firestore.Timestamp.fromDate(now),
-          admin.firestore.Timestamp.fromDate(deadline.deadlineDate),
-          0,
-          0
-        );
-      }
-
-      await answerModel.create({
-        answerId: answerId,
-        startedAt: admin.firestore.Timestamp.fromDate(now),
-        round: user ? user.round + 1 : 0,
-        message: message,
-        questions: questions,
-        numberOfQuestions: roundedQuestionIds.length,
-      });
+          user ? user.round + 1 : 0
+        ),
+        answerModel.create({
+          answerId: answerId,
+          startedAt: admin.firestore.Timestamp.fromDate(now),
+          round: user ? user.round + 1 : 0,
+          message: message,
+          questions: questions,
+          numberOfQuestions: roundedQuestionIds.length,
+        }),
+      ]);
 
       await message.delete();
     }
