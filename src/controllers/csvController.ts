@@ -22,6 +22,7 @@ export class CsvController {
     message: Message,
     strage: admin.storage.Storage
   ): Promise<void> {
+    await message.channel.sendTyping();
     // strageに保存しているcsvテンプレートを返す
     const url = await strage
       .bucket()

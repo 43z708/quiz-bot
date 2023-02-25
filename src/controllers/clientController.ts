@@ -36,7 +36,11 @@ export class ClientlController {
 
   public login() {
     this.client.once(Events.ClientReady, (c) => {
-      console.log(`Ready! Logged in as ${c.user.tag}`);
+      console.log(
+        `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
+          .map((guild) => guild.name)
+          .join('\n')}`
+      );
     });
     this.client.login(this.token);
   }
