@@ -18,7 +18,7 @@ export const utils = {
   coolTimeError:
     '!quiz-startコマンドの制限時間のエラーが生じています。管理者に問い合わせてください。',
   questionNumber: (order: number, numberOfQuestions: number) => {
-    return `第${order + 1}問 / 全${numberOfQuestions}問`;
+    return `Question ${order + 1} / ${numberOfQuestions} Questions`;
   },
   deadline: 'までに全問題に回答してください。',
   placeholder: '選択してください。',
