@@ -184,7 +184,9 @@ export class QuizController {
               });
             await interaction.message.delete();
           } else {
-            await interaction.deferReply();
+            await interaction.deferReply({
+              ephemeral: true,
+            });
 
             // 次の問題を出題、ユーザー情報を更新
             const response = await Promise.all([
@@ -219,7 +221,7 @@ export class QuizController {
               }),
             ]);
             await interaction.editReply(response[0]);
-            await interaction.message.delete();
+            // await interaction.message.delete();
           }
         } else {
           // 締切時間を過ぎた
