@@ -79,33 +79,33 @@ export class ChannelController {
   }
 
   /**
-   * 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
+   * 送られたメッセージまたはinteractionのchannelIdがquiz-manegementがどうか
    * @param channels
    * @param message
    * @returns
    */
   public static isQuizManagementChannel(
     channels: ChannelData[],
-    message: Message
+    channelId: string | null
   ): boolean {
     return channels.some(
       (channel) =>
-        channel.type === 'quiz-management' && message.channel.id === channel.id
+        channel.type === 'quiz-management' && channel.id === channelId
     );
   }
 
   /**
-   * 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
+   * 送られたメッセージまたはinteractionのchannelIdがquizチャンネルかどうか
    * @param channels
    * @param message
    * @returns
    */
   public static isQuizChannel(
     channels: ChannelData[],
-    message: Message
+    channelId: string | null
   ): boolean {
     return channels.some(
-      (channel) => channel.type === 'quiz' && message.channel.id === channel.id
+      (channel) => channel.type === 'quiz' && channel.id === channelId
     );
   }
 

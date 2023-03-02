@@ -5,6 +5,7 @@ import {
   GatewayIntentBits,
   PermissionsBitField,
   InteractionType,
+  CommandInteraction,
 } from 'discord.js';
 import { CsvController } from './csvController';
 import { ChannelController } from './channelController';
@@ -13,6 +14,7 @@ import { GuildController } from './guildController';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
 import { ChannelData } from '../models/channelModel';
+import { Commands } from '../services/commandService';
 
 /**
  * nodejs起動時に発火するclientの処理
@@ -35,7 +37,14 @@ export class ClientlController {
   }
 
   public login() {
-    this.client.once(Events.ClientReady, (c) => {
+    this.client.once(Events.ClientReady, async (c) => {
+      if (this.client.application) {
+        // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
+        await this.client.application.commands.set(
+          Commands,
+          '1069638600460873858'
+        );
+      }
       console.log(
         `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
           .map((guild) => guild.name)
@@ -81,6 +90,22 @@ export class ClientlController {
         });
         return;
       }
+
+      // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
+      const isQuizChannel = ChannelController.isQuizChannel(
+        this.channels,
+        interaction.channelId
+      );
+
+      // クイズ開始(quizチャンネルのみ)
+      if (
+        interaction.type === InteractionType.ApplicationCommand &&
+        interaction.commandName === utils.quizStartCommandName &&
+        isQuizChannel
+      ) {
+        await QuizController.start(interaction, db);
+      }
+
       // quizチャンネルのIDを取得
       const channelId = ChannelController.getQuizChannel(this.channels).id;
 
@@ -127,13 +152,13 @@ export class ClientlController {
       // 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
       const isQuizManagementChannel = ChannelController.isQuizManagementChannel(
         this.channels,
-        message
+        message.channelId
       );
 
       // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
       const isQuizChannel = ChannelController.isQuizChannel(
         this.channels,
-        message
+        message.channelId
       );
 
       // csvテンプレート出力(quiz-managementチャンネルのみ)
@@ -158,10 +183,6 @@ export class ClientlController {
         isQuizManagementChannel
       ) {
         await CsvController.exportAnswers(message, db);
-      }
-      // クイズ開始(quizチャンネルのみ)
-      if (message.content === utils.quizStartCommandName && isQuizChannel) {
-        await QuizController.start(message, db);
       }
       // quizチャンネルでadmin権限以外の人のコマンド以外の発言は消す
       if (
