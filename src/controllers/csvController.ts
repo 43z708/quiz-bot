@@ -92,7 +92,7 @@ export class CsvController {
     const answerModel = new AnswerModel(db);
     const [questions, answers] = await Promise.all([
       questionModel.index(message.guildId),
-      answerModel.index(message),
+      answerModel.index(message.guildId),
     ]);
     if (questions && answers) {
       const answersForCsv = AnswerService.formatCsv(questions, answers);

@@ -4,7 +4,7 @@ import {
   QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import admin from 'firebase-admin';
-import { Message } from 'discord.js';
+import { CommandInteraction } from 'discord.js';
 import { QuestionData } from './questionModel';
 /**
  * Firestore のドキュメントと AnswerData オブジェクトの型変換
@@ -107,7 +107,7 @@ export interface AnswerCreateParams {
   answerId: string;
   startedAt: admin.firestore.Timestamp;
   round: number;
-  message: Message;
+  interaction: CommandInteraction;
   questions: QuestionData[];
   numberOfQuestions: number;
 }
@@ -152,14 +152,14 @@ export class AnswerModel {
       const batch = this.db.batch();
       const collection = this.db
         .collection('guilds')
-        .doc(params.message.guildId!)
+        .doc(params.interaction.guildId!)
         .collection('answers');
       await collection.doc(params.answerId).set(
         answerDataConverter.toFirestore({
           id: params.answerId,
-          guildId: params.message.guildId!,
-          userId: params.message.author.id,
-          userName: `${params.message.author.username}#${params.message.author.discriminator}`,
+          guildId: params.interaction.guildId!,
+          userId: params.interaction.user.id,
+          userName: `${params.interaction.user.username}#${params.interaction.user.discriminator}`,
           startedAt: params.startedAt,
           finishedAt: null,
           duration: null,
@@ -224,14 +224,12 @@ export class AnswerModel {
     }
   }
 
-  public async index(
-    message: Message
-  ): Promise<AnswerDataForCsv[] | undefined> {
+  public async index(guildId: string): Promise<AnswerDataForCsv[] | undefined> {
     try {
       const batch = this.db.batch();
       const collection = this.db
         .collection('guilds')
-        .doc(message.guildId!)
+        .doc(guildId)
         .collection('answers');
       const answerDocs = await collection.where('finishedAt', '!=', null).get();
       const answers: AnswerData[] = [];

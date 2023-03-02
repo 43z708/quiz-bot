@@ -16,11 +16,11 @@ export class GuildController {
     db: admin.firestore.Firestore
   ): Promise<void> {
     const guildModel = new GuildModel(db);
-    // クールタイムの初期値は6時間、問題数は30問
+    // クールタイムの初期値は30分、問題数は30問
     const guildData: GuildData = {
       id: guild.id,
       name: guild.name,
-      cooltime: 6 * 3600,
+      cooltime: 30 * 60,
       numberOfQuestions: 30,
     };
     await guildModel.setGuild(guildData);
