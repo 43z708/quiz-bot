@@ -8,7 +8,8 @@ export const utils = {
   quizStartCommandName: 'quiz-start', //スラッシュコマンドのため!不要
   initialSendMessage:
     '@here \n**quiz-botの使い方**\n\n**csvテンプレート出力コマンド**：```!quiz-template```（quiz-managementチャンネル内のみ有効）\n\n**クイズ問題csvアップロードコマンド**（2回目のアップロード以降は、既存の問題・ユーザーの回答データはすべて削除され、新しい問題データにリフレッシュされます。一部修正や追加、削除を希望の場合は開発者まで問合せてください。）：```!quiz-import```（quiz-managementチャンネル内のみ有効かつcsvファイルを添付したうえでコマンド入力必須）\n\n**回答一覧csv出力**：```!quiz-answers```（quiz-managementチャンネル内のみ有効）\n\n**クイズ開始コマンド**：```/quiz-start```（quizチャンネル内のみ有効。quizチャンネルではadmin以外のユーザーはコマンド以外のコメントは自動消去されます。）\n\n※quiz-managementチャンネル：管理者専用\n※quizチャンネル：クイズを実際に受けるチャンネル（cooltime初期値は30分、変更の際は開発者に問合せてください。）\n※出題数初期値は30問。csvが30問以上なら30問をランダムピックアップして出題、30問未満なら全問題をシャッフルして出題されます。出題数初期値30問を変更したい場合は開発者に問い合わせてください。',
-  importSuccessReply: 'csvの読み込みに成功しました。',
+  importStart: 'dbを更新します。しばらくお待ちください。',
+  importSuccessReply: 'csvデータの取り込みに成功しました。',
   importErrorReply0: 'csvファイルを添付してください。',
   importErrorFormatReply: 'csvファイルの入力に誤りがあります。',
   importErrorReplyMoreThan2:

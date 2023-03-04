@@ -1,7 +1,7 @@
 import { Guild } from 'discord.js';
 import admin from 'firebase-admin';
 import { GuildModel, GuildData } from '../models/guildModel';
-
+import { cooltime, numberOfQuestions } from '../config';
 /**
  * サーバーの情報に関する処理
  */
@@ -20,8 +20,8 @@ export class GuildController {
     const guildData: GuildData = {
       id: guild.id,
       name: guild.name,
-      cooltime: 30 * 60,
-      numberOfQuestions: 30,
+      cooltime: cooltime,
+      numberOfQuestions: numberOfQuestions,
     };
     await guildModel.setGuild(guildData);
   }

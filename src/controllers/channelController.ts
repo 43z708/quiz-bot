@@ -8,6 +8,7 @@ import {
 import { ChannelModel, ChannelData } from '../models/channelModel';
 import admin from 'firebase-admin';
 import { utils } from '../utils';
+import { cooltime } from '../config';
 
 export class ChannelController {
   /**
@@ -36,7 +37,7 @@ export class ChannelController {
       const quizChannel = await guild.channels.create({
         name: utils.quizChannelName,
         type: ChannelType.GuildText,
-        rateLimitPerUser: 6 * 3600,
+        rateLimitPerUser: cooltime,
         parent: category.id,
       });
       const quizManagementChannel = await guild.channels.create({
@@ -46,6 +47,11 @@ export class ChannelController {
             id: guild.roles.everyone.id,
             type: OverwriteType.Role,
             deny: [PermissionFlagsBits.ViewChannel],
+          },
+          {
+            id: botId,
+            type: OverwriteType.Member,
+            allow: [PermissionFlagsBits.ViewChannel],
           },
         ],
         parent: category.id,

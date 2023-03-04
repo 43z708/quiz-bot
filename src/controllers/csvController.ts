@@ -47,36 +47,41 @@ export class CsvController {
     message: Message,
     db: admin.firestore.Firestore
   ): Promise<void> {
-    // メッセージに添付されたファイルのurl
-    const urls = message.attachments.map((attachment) => attachment.url);
-    const parsedUrl = urls[0] ? url.parse(urls[0]) : null;
-    const ext =
-      parsedUrl && parsedUrl.pathname ? path.extname(parsedUrl.pathname) : '';
-    console.log({ ext });
-    if (urls.length === 1 && urls[0] && ext === '.csv') {
-      await message.channel.sendTyping();
-      // csvファイル1つのみ
-      const response = await fetch(urls[0]);
-      const data = await response.text();
-      if (CsvService.convertFromCsvToArray(data).length !== 0) {
-        // CSVを配列に変換し、DBに保存
-        await new QuestionModel(db).setQuestions(
-          CsvService.convertFromCsvToArray(data),
-          message.guildId ?? ''
-        );
-        // users内ドキュメントをすべて削除
-        await new UserModel(db).deleteAll(message.guildId ?? '');
-        await message.reply(utils.importSuccessReply);
+    try {
+      // メッセージに添付されたファイルのurl
+      const urls = message.attachments.map((attachment) => attachment.url);
+      const parsedUrl = urls[0] ? url.parse(urls[0]) : null;
+      const ext =
+        parsedUrl && parsedUrl.pathname ? path.extname(parsedUrl.pathname) : '';
+      if (urls.length === 1 && urls[0] && ext === '.csv') {
+        await message.reply(utils.importStart);
+        // csvファイル1つのみ
+        const response = await fetch(urls[0]);
+        const data = await response.text();
+        if (CsvService.convertFromCsvToArray(data).length !== 0) {
+          // CSVを配列に変換し、DBに保存
+          await Promise.all([
+            new QuestionModel(db).setQuestions(
+              CsvService.convertFromCsvToArray(data),
+              message.guildId ?? ''
+            ),
+            // users内ドキュメントをすべて削除
+            new UserModel(db).deleteAll(message.guildId ?? ''),
+          ]);
+          await message.reply(utils.importSuccessReply);
+        } else {
+          // csvが空や書式に合っていない
+          message.reply(utils.importErrorFormatReply);
+        }
+      } else if (urls.length === 0) {
+        // 添付ファイルなし
+        message.reply(utils.importErrorReply0);
       } else {
-        // csvが空や書式に合っていない
-        message.reply(utils.importErrorFormatReply);
+        // 添付ファイルが多い
+        message.reply(utils.importErrorReplyMoreThan2);
       }
-    } else if (urls.length === 0) {
-      // 添付ファイルなし
-      message.reply(utils.importErrorReply0);
-    } else {
-      // 添付ファイルが多い
-      message.reply(utils.importErrorReplyMoreThan2);
+    } catch (e) {
+      console.log({ e });
     }
   }
 

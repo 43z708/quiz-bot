@@ -38,6 +38,11 @@ export class ClientlController {
 
   public login() {
     this.client.once(Events.ClientReady, async (c) => {
+      console.log(
+        `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
+          .map((guild) => guild.name)
+          .join('\n')}`
+      );
       if (this.client.application) {
         // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
         await this.client.application.commands.set(
@@ -45,11 +50,6 @@ export class ClientlController {
           '1069638600460873858'
         );
       }
-      console.log(
-        `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
-          .map((guild) => guild.name)
-          .join('\n')}`
-      );
     });
     this.client.login(this.token);
   }
@@ -60,6 +60,13 @@ export class ClientlController {
    */
   public guildCreate(db: admin.firestore.Firestore) {
     this.client.on('guildCreate', async (guild) => {
+      if (this.client.application) {
+        // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
+        await this.client.application.commands.set(
+          Commands,
+          '1069638600460873858'
+        );
+      }
       await Promise.all([
         ChannelController.create(guild, this.client.user?.id ?? '', db),
         GuildController.create(guild, db),
@@ -73,8 +80,6 @@ export class ClientlController {
    */
   public interactionCreate(db: admin.firestore.Firestore) {
     this.client.on('interactionCreate', async (interaction) => {
-      console.log({ interaction });
-
       // quizチャンネル情報を取得
       if (this.channels.length === 0) {
         this.channels = await ChannelController.getChannels(
