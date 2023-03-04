@@ -40,7 +40,10 @@ export class ClientlController {
     this.client.once(Events.ClientReady, async (c) => {
       if (this.client.application) {
         // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
-        await this.client.application.commands.set(Commands);
+        await this.client.application.commands.set(
+          Commands,
+          '1069638600460873858'
+        );
       }
       console.log(
         `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
