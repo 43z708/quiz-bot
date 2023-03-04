@@ -45,10 +45,7 @@ export class ClientlController {
       );
       if (this.client.application) {
         // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
-        await this.client.application.commands.set(
-          Commands,
-          '1069638600460873858'
-        );
+        await this.client.application.commands.set(Commands);
       }
     });
     this.client.login(this.token);
@@ -62,10 +59,7 @@ export class ClientlController {
     this.client.on('guildCreate', async (guild) => {
       if (this.client.application) {
         // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
-        await this.client.application.commands.set(
-          Commands,
-          '1069638600460873858'
-        );
+        await this.client.application.commands.set(Commands);
       }
       await Promise.all([
         ChannelController.create(guild, this.client.user?.id ?? '', db),
