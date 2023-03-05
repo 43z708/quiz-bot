@@ -20,7 +20,7 @@ const botModel = new BotModel(db);
     bots.forEach((bot) => {
       // 各種clientを稼働
       const clientlController = new ClientlController(bot.token);
-      clientlController.login();
+      clientlController.login(db);
       clientlController.guildCreate(db);
       clientlController.messageCreate(db, strage);
       clientlController.interactionCreate(db);

@@ -85,6 +85,19 @@ export class ChannelController {
   }
 
   /**
+   * 全チャンネル情報を取得
+   * @param guildId
+   * @param db
+   * @returns
+   */
+  static async getAllChannels(
+    db: admin.firestore.Firestore
+  ): Promise<ChannelData[]> {
+    const channels = await new ChannelModel(db).getAllChannels();
+    return channels;
+  }
+
+  /**
    * 送られたメッセージまたはinteractionのchannelIdがquiz-manegementがどうか
    * @param channels
    * @param message

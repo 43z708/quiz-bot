@@ -36,7 +36,7 @@ export class ClientlController {
     });
   }
 
-  public login() {
+  public login(db: admin.firestore.Firestore) {
     this.client.once(Events.ClientReady, async (c) => {
       console.log(
         `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
@@ -47,6 +47,7 @@ export class ClientlController {
         // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
         await this.client.application.commands.set(Commands);
       }
+      this.channels = await ChannelController.getAllChannels(db);
     });
     this.client.login(this.token);
   }
@@ -65,6 +66,7 @@ export class ClientlController {
         ChannelController.create(guild, this.client.user?.id ?? '', db),
         GuildController.create(guild, db),
       ]);
+      this.channels = await ChannelController.getAllChannels(db);
     });
   }
 
@@ -74,13 +76,10 @@ export class ClientlController {
    */
   public interactionCreate(db: admin.firestore.Firestore) {
     this.client.on('interactionCreate', async (interaction) => {
-      // quizチャンネル情報を取得
-      if (this.channels.length === 0) {
-        this.channels = await ChannelController.getChannels(
-          interaction.guild?.id ?? '',
-          db
-        );
-      }
+      // サーバー内のチャンネル情報を取得
+      const channels = this.channels.filter(
+        (channel) => channel.guildId === interaction.guild?.id
+      );
 
       // サーバー情報が読み取れない場合はエラー
       if (!interaction.guildId && interaction.isRepliable()) {
@@ -92,7 +91,7 @@ export class ClientlController {
 
       // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
       const isQuizChannel = ChannelController.isQuizChannel(
-        this.channels,
+        channels,
         interaction.channelId
       );
 
@@ -106,7 +105,7 @@ export class ClientlController {
       }
 
       // quizチャンネルのIDを取得
-      const channelId = ChannelController.getQuizChannel(this.channels).id;
+      const channelId = ChannelController.getQuizChannel(channels).id;
 
       if (
         interaction.type === InteractionType.MessageComponent &&
@@ -140,25 +139,25 @@ export class ClientlController {
         });
         return;
       }
-      // チャンネル情報を取得
-      if (this.channels.length === 0) {
-        this.channels = await ChannelController.getChannels(
-          message.guild?.id ?? '',
-          db
-        );
-      }
+      console.log({ message });
+      // サーバー内のチャンネル情報を取得
+      const channels = this.channels.filter(
+        (channel) => channel.guildId === message.guild?.id
+      );
 
       // 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
       const isQuizManagementChannel = ChannelController.isQuizManagementChannel(
-        this.channels,
+        channels,
         message.channelId
       );
+      console.log({ isQuizManagementChannel });
 
       // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
       const isQuizChannel = ChannelController.isQuizChannel(
-        this.channels,
+        channels,
         message.channelId
       );
+      console.log({ isQuizChannel });
 
       // csvテンプレート出力(quiz-managementチャンネルのみ)
       if (

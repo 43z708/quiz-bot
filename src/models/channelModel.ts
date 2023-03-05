@@ -82,7 +82,7 @@ export class ChannelModel {
   }
 
   /**
-   * 全channelを取得
+   * guildに所属する全channelを取得
    * @param guildId
    * @returns
    */
@@ -91,6 +91,20 @@ export class ChannelModel {
       .collection('channels')
       .where('guildId', '==', guildId)
       .get();
+    const channelDataList: ChannelData[] = [];
+    channelDocs.forEach((doc) => {
+      channelDataList.push(channelDataConverter.fromFirestore(doc));
+    });
+    return channelDataList;
+  }
+
+  /**
+   * botが所有する全channelを取得
+   * @param guildId
+   * @returns
+   */
+  public async getAllChannels(): Promise<ChannelData[]> {
+    const channelDocs = await this.db.collection('channels').get();
     const channelDataList: ChannelData[] = [];
     channelDocs.forEach((doc) => {
       channelDataList.push(channelDataConverter.fromFirestore(doc));
