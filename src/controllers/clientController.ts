@@ -128,67 +128,72 @@ export class ClientlController {
     strage: admin.storage.Storage
   ) {
     this.client.on('messageCreate', async (message) => {
-      // bot自身のmessageは無視
-      if (message.author.id == this.client.user?.id) {
-        return;
-      }
-      // サーバー情報が読み取れない場合はエラー
-      if (!message.guildId) {
-        await message.reply({
-          content: utils.mustUseInServer,
-        });
-        return;
-      }
-      console.log({ message });
-      // サーバー内のチャンネル情報を取得
-      const channels = this.channels.filter(
-        (channel) => channel.guildId === message.guild?.id
-      );
+      try {
+        // bot自身のmessageは無視
+        if (message.author.id == this.client.user?.id) {
+          return;
+        }
+        // サーバー情報が読み取れない場合はエラー
+        if (!message.guildId) {
+          await message.reply({
+            content: utils.mustUseInServer,
+          });
+          return;
+        }
+        console.log({ message });
+        // サーバー内のチャンネル情報を取得
+        const channels = this.channels.filter(
+          (channel) => channel.guildId === message.guild?.id
+        );
 
-      // 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
-      const isQuizManagementChannel = ChannelController.isQuizManagementChannel(
-        channels,
-        message.channelId
-      );
-      console.log({ isQuizManagementChannel });
+        // 送られたメッセージが所属するチャンネルがquiz-manegementがどうか
+        const isQuizManagementChannel =
+          ChannelController.isQuizManagementChannel(
+            channels,
+            message.channelId
+          );
+        console.log({ isQuizManagementChannel });
 
-      // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
-      const isQuizChannel = ChannelController.isQuizChannel(
-        channels,
-        message.channelId
-      );
-      console.log({ isQuizChannel });
+        // 送られたメッセージが所属するチャンネルがquizチャンネルかどうか
+        const isQuizChannel = ChannelController.isQuizChannel(
+          channels,
+          message.channelId
+        );
+        console.log({ isQuizChannel });
 
-      // csvテンプレート出力(quiz-managementチャンネルのみ)
-      if (
-        message.content === utils.quizTemplateCommandName &&
-        isQuizManagementChannel
-      ) {
-        await CsvController.exportTemplate(message, strage);
-      }
+        // csvテンプレート出力(quiz-managementチャンネルのみ)
+        if (
+          message.content === utils.quizTemplateCommandName &&
+          isQuizManagementChannel
+        ) {
+          await CsvController.exportTemplate(message, strage);
+        }
 
-      // 問題選択肢csvアップロード(quiz-managementチャンネルのみ)
-      if (
-        this.isAdmin(message) &&
-        message.content === utils.quizImportCommandName &&
-        isQuizManagementChannel
-      ) {
-        await CsvController.importQuestions(message, db);
-      }
-      // 回答一覧csv出力(quiz-managementチャンネルのみ)
-      if (
-        message.content === utils.quizAnswersCommandName &&
-        isQuizManagementChannel
-      ) {
-        await CsvController.exportAnswers(message, db);
-      }
-      // quizチャンネルでadmin権限以外の人のコマンド以外の発言は消す
-      if (
-        message.content !== utils.quizStartCommandName &&
-        isQuizChannel &&
-        !this.isAdmin(message)
-      ) {
-        await message.delete();
+        // 問題選択肢csvアップロード(quiz-managementチャンネルのみ)
+        if (
+          this.isAdmin(message) &&
+          message.content === utils.quizImportCommandName &&
+          isQuizManagementChannel
+        ) {
+          await CsvController.importQuestions(message, db);
+        }
+        // 回答一覧csv出力(quiz-managementチャンネルのみ)
+        if (
+          message.content === utils.quizAnswersCommandName &&
+          isQuizManagementChannel
+        ) {
+          await CsvController.exportAnswers(message, db);
+        }
+        // quizチャンネルでadmin権限以外の人のコマンド以外の発言は消す
+        if (
+          message.content !== utils.quizStartCommandName &&
+          isQuizChannel &&
+          !this.isAdmin(message)
+        ) {
+          await message.delete();
+        }
+      } catch (e) {
+        console.log({ e });
       }
     });
   }
