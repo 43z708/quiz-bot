@@ -2,7 +2,6 @@ import { ApplicationCommandDataResolvable } from 'discord.js';
 
 const quizStart: ApplicationCommandDataResolvable = {
   name: 'quiz-start',
-  description:
-    'クイズ開始コマンド（quizチャンネル内のみ有効。quizチャンネルではadmin以外のユーザーはコマンド以外のコメントは自動消去されます。）',
+  description: 'quiz start command / クイズ開始コマンド ',
 };
 export const Commands = [quizStart];
