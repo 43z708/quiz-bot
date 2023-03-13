@@ -17,13 +17,17 @@ export class GuildController {
   ): Promise<void> {
     const guildModel = new GuildModel(db);
     // クールタイムの初期値は30分、問題数は30問
-    const guildData: GuildData = {
-      id: guild.id,
-      name: guild.name,
-      cooltime: cooltime,
-      numberOfQuestions: numberOfQuestions,
-    };
-    await guildModel.setGuild(guildData);
+    try {
+      const guildData: GuildData = {
+        id: guild.id,
+        name: guild.name,
+        cooltime: cooltime,
+        numberOfQuestions: numberOfQuestions,
+      };
+      await guildModel.setGuild(guildData);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   /**

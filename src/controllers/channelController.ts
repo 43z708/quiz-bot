@@ -21,53 +21,57 @@ export class ChannelController {
     botId: string,
     db: admin.firestore.Firestore
   ): Promise<void> {
-    // バリデーション
-    const countchannels = await db
-      .collection('channels')
-      .where('guildId', '==', guild.id)
-      .count()
-      .get();
+    try {
+      // バリデーション
+      const countchannels = await db
+        .collection('channels')
+        .where('guildId', '==', guild.id)
+        .count()
+        .get();
 
-    // quizカテゴリとチャンネル、管理用チャンネルを作成する
-    if (countchannels.data().count === 0) {
-      const category = await guild.channels.create({
-        name: utils.categoryName,
-        type: ChannelType.GuildCategory,
-      });
-      const quizChannel = await guild.channels.create({
-        name: utils.quizChannelName,
-        type: ChannelType.GuildText,
-        rateLimitPerUser: cooltime,
-        parent: category.id,
-      });
-      const quizManagementChannel = await guild.channels.create({
-        name: utils.quizManagementChannelName,
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            type: OverwriteType.Role,
-            deny: [PermissionFlagsBits.ViewChannel],
-          },
-          {
-            id: botId,
-            type: OverwriteType.Member,
-            allow: [PermissionFlagsBits.ViewChannel],
-          },
-        ],
-        parent: category.id,
-      });
-      const channelModel = new ChannelModel(db);
-      await Promise.all([
-        channelModel.setChannel(quizChannel, 'quiz', botId, guild.id),
-        channelModel.setChannel(
-          quizManagementChannel,
-          'quiz-management',
-          botId,
-          guild.id
-        ),
-      ]);
+      // quizカテゴリとチャンネル、管理用チャンネルを作成する
+      if (countchannels.data().count === 0) {
+        const category = await guild.channels.create({
+          name: utils.categoryName,
+          type: ChannelType.GuildCategory,
+        });
+        const quizChannel = await guild.channels.create({
+          name: utils.quizChannelName,
+          type: ChannelType.GuildText,
+          rateLimitPerUser: cooltime,
+          parent: category.id,
+        });
+        const quizManagementChannel = await guild.channels.create({
+          name: utils.quizManagementChannelName,
+          permissionOverwrites: [
+            {
+              id: guild.roles.everyone.id,
+              type: OverwriteType.Role,
+              deny: [PermissionFlagsBits.ViewChannel],
+            },
+            {
+              id: botId,
+              type: OverwriteType.Member,
+              allow: [PermissionFlagsBits.ViewChannel],
+            },
+          ],
+          parent: category.id,
+        });
+        const channelModel = new ChannelModel(db);
+        await Promise.all([
+          channelModel.setChannel(quizChannel, 'quiz', botId, guild.id),
+          channelModel.setChannel(
+            quizManagementChannel,
+            'quiz-management',
+            botId,
+            guild.id
+          ),
+        ]);
 
-      await quizManagementChannel.send(utils.initialSendMessage);
+        await quizManagementChannel.send(utils.initialSendMessage);
+      }
+    } catch (e) {
+      console.log(e);
     }
   }
   /**

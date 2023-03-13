@@ -22,21 +22,25 @@ export class CsvController {
     message: Message,
     strage: admin.storage.Storage
   ): Promise<void> {
-    await message.channel.sendTyping();
-    // strageに保存しているcsvテンプレートを返す
-    const url = await strage
-      .bucket()
-      .file('template/quiz-template.csv')
-      .getSignedUrl({
-        action: 'read',
-        expires: '12-31-3020', //1000年後に設定
-      });
-    message
-      .reply({
-        files: url,
-      })
-      .then()
-      .catch(console.error);
+    try {
+      await message.channel.sendTyping();
+      // strageに保存しているcsvテンプレートを返す
+      const url = await strage
+        .bucket()
+        .file('template/quiz-template.csv')
+        .getSignedUrl({
+          action: 'read',
+          expires: '12-31-3020', //1000年後に設定
+        });
+      message
+        .reply({
+          files: url,
+        })
+        .then()
+        .catch(console.error);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   /**
@@ -89,29 +93,33 @@ export class CsvController {
     message: Message,
     db: admin.firestore.Firestore
   ): Promise<void> {
-    if (!message.guildId) {
-      return;
-    }
-    await message.channel.sendTyping();
-    const questionModel = new QuestionModel(db);
-    const answerModel = new AnswerModel(db);
-    const [questions, answers] = await Promise.all([
-      questionModel.index(message.guildId),
-      answerModel.index(message.guildId),
-    ]);
-    if (questions && answers) {
-      const answersForCsv = AnswerService.formatCsv(questions, answers);
-      if (message.guildId && answersForCsv) {
-        const file = await CsvService.convertFromArrayToCsv(
-          message.guildId,
-          answersForCsv
-        );
-        message.reply({ files: [file] });
+    try {
+      if (!message.guildId) {
+        return;
+      }
+      await message.channel.sendTyping();
+      const questionModel = new QuestionModel(db);
+      const answerModel = new AnswerModel(db);
+      const [questions, answers] = await Promise.all([
+        questionModel.index(message.guildId),
+        answerModel.index(message.guildId),
+      ]);
+      if (questions && answers) {
+        const answersForCsv = AnswerService.formatCsv(questions, answers);
+        if (message.guildId && answersForCsv) {
+          const file = await CsvService.convertFromArrayToCsv(
+            message.guildId,
+            answersForCsv
+          );
+          message.reply({ files: [file] });
+        } else {
+          message.reply(utils.csvExportError);
+        }
       } else {
         message.reply(utils.csvExportError);
       }
-    } else {
-      message.reply(utils.csvExportError);
+    } catch (e) {
+      console.log(e);
     }
   }
 }

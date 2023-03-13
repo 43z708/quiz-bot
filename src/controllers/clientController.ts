@@ -58,6 +58,7 @@ export class ClientlController {
    */
   public guildCreate(db: admin.firestore.Firestore) {
     this.client.on('guildCreate', async (guild) => {
+      try {
       if (this.client.application) {
         // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
         await this.client.application.commands.set(Commands);
@@ -67,7 +68,10 @@ export class ClientlController {
         GuildController.create(guild, db),
       ]);
       this.channels = await ChannelController.getAllChannels(db);
-    });
+    } catch (e ) {
+      console.log(e)
+    }
+  });
   }
 
   /**
@@ -76,6 +80,7 @@ export class ClientlController {
    */
   public interactionCreate(db: admin.firestore.Firestore) {
     this.client.on('interactionCreate', async (interaction) => {
+      try {
       // サーバー内のチャンネル情報を取得
       const channels = this.channels.filter(
         (channel) => channel.guildId === interaction.guild?.id
@@ -115,6 +120,11 @@ export class ClientlController {
       ) {
         await QuizController.reply(interaction, db);
       }
+              
+    } catch (e) {
+      console.log(e)
+    }
+
     });
   }
 
