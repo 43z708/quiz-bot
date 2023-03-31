@@ -37,19 +37,23 @@ export class ClientlController {
   }
 
   public login(db: admin.firestore.Firestore) {
-    this.client.once(Events.ClientReady, async (c) => {
-      console.log(
-        `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
-          .map((guild) => guild.name)
-          .join('\n')}`
-      );
-      if (this.client.application) {
-        // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
-        await this.client.application.commands.set(Commands);
-      }
-      this.channels = await ChannelController.getAllChannels(db);
-    });
-    this.client.login(this.token);
+    try {
+      this.client.once(Events.ClientReady, async (c) => {
+        console.log(
+          `Ready! Logged in as ${c.user.tag} on ${c.guilds.cache
+            .map((guild) => guild.name)
+            .join('\n')}`
+        );
+        if (this.client.application) {
+          // 開発環境ではsetの第2引数にguildIdを入れ、本番環境ではキャッシュさせるため第2引数は不要
+          await this.client.application.commands.set(Commands);
+        }
+        this.channels = await ChannelController.getAllChannels(db);
+      });
+      this.client.login(this.token);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   /**
