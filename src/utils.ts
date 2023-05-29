@@ -17,7 +17,7 @@ export const utils = {
   mustUseInServer: 'サーバーで実行する必要があります。',
   noUserInfo: 'ユーザー情報がありません。管理者に問い合わせてください。',
   coolTimeError:
-    '!quiz-startコマンドの制限時間のエラーが生じています。管理者に問い合わせてください。',
+    '/quiz-startコマンドの制限時間のエラーが生じています。管理者に問い合わせてください。',
   questionNumber: (order: number, numberOfQuestions: number) => {
     return `Question ${order + 1} / ${numberOfQuestions} Questions`;
   },
@@ -26,7 +26,7 @@ export const utils = {
   quizEnd: 'お疲れ様でした！クイズは終了です。',
   systemError: 'システムエラーが発生しています。管理者に問い合わせてください。',
   quizRetry:
-    '制限時間を超過しています。もう一度!quiz-startでクイズをやり直してください。',
+    '制限時間を超過しています。もう一度/quiz-startでクイズをやり直してください。',
   csvHeader: {
     userName: '回答者',
     percentageOfCorrects: '正答率',

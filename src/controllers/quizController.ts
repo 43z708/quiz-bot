@@ -19,7 +19,7 @@ import { QuizService } from '../services/quizService';
  */
 export class QuizController {
   /**
-   * !quiz-startコマンドで発火する関数
+   * /quiz-startコマンドで発火する関数
    * @param message
    * @param db
    */
@@ -72,7 +72,7 @@ export class QuizController {
 
         if (user && nowTime <= user.deadline.toDate().getTime()) {
           // クイズ2回目以降の回答(すでにユーザー情報があるため)
-          // 締切時間前にクイズを!quiz-startで再開することはできない。(discord上でcooltime設定を変えている可能性を考慮)
+          // 締切時間前にクイズを/quiz-startで再開することはできない。(discord上でcooltime設定を変えている可能性を考慮)
           await interaction.reply({
             content: utils.coolTimeError,
             ephemeral: true,
@@ -99,7 +99,7 @@ export class QuizController {
         }
 
         // dbの整理
-        // cooltimeを過ぎているため、!quiz-startを許可
+        // cooltimeを過ぎているため、/quiz-startを許可
         // ユーザー情報を更新または作成
         await Promise.all([
           userModel.setUser(
